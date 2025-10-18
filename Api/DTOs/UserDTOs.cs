@@ -18,6 +18,8 @@ public class CreateUserRequest
     public string Password { get; set; } = string.Empty;
     
     public bool IsActive { get; set; } = true;
+    
+    public List<string> Roles { get; set; } = new List<string>();
 }
 
 public class UpdateUserRequest
@@ -33,6 +35,8 @@ public class UpdateUserRequest
     public string? Password { get; set; }
     
     public bool? IsActive { get; set; }
+    
+    public int? AssignedStoreId { get; set; }
 }
 
 public class UserResponse
@@ -44,4 +48,11 @@ public class UserResponse
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
     public List<string> Roles { get; set; } = new List<string>();
+    public int? AssignedStoreId { get; set; }
+}
+
+public class AssignUserToStoreRequest
+{
+    [Required]
+    public int StoreId { get; set; }
 }

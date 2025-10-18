@@ -9,6 +9,7 @@ public class ApplicationDbContext : DbContext
     {
     }
 
+
     public DbSet<User> Users { get; set; }
     public DbSet<Role> Roles { get; set; }
     public DbSet<UserRole> UserRoles { get; set; }
@@ -17,6 +18,19 @@ public class ApplicationDbContext : DbContext
     public DbSet<Product> Products { get; set; }
     public DbSet<Warehouse> Warehouses { get; set; }
     public DbSet<ProductInventory> ProductInventories { get; set; }
+    public DbSet<PurchaseOrder> PurchaseOrders { get; set; }
+    public DbSet<PurchaseItem> PurchaseItems { get; set; }
+    public DbSet<SalesOrder> SalesOrders { get; set; }
+    public DbSet<SalesItem> SalesItems { get; set; }
+    public DbSet<ProductAssembly> ProductAssemblies { get; set; }
+    public DbSet<BillOfMaterial> BillOfMaterials { get; set; }
+    public DbSet<ProductRequest> ProductRequests { get; set; }
+    public DbSet<ProductRequestItem> ProductRequestItems { get; set; }
+    public DbSet<ProductMovement> ProductMovements { get; set; }
+    public DbSet<ProductMovementSummary> ProductMovementSummaries { get; set; }
+    public DbSet<ShoppingCart> ShoppingCarts { get; set; }
+    public DbSet<OrderTracking> OrderTrackings { get; set; }
+    public DbSet<Customer> Customers { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -132,6 +146,289 @@ public class ApplicationDbContext : DbContext
             entity.HasIndex(e => new { e.ProductId, e.WarehouseId }).IsUnique();
         });
 
+        // Configure PurchaseOrder entity
+        modelBuilder.Entity<PurchaseOrder>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.OrderNumber).IsUnique();
+            entity.Property(e => e.OrderNumber).IsRequired();
+            entity.Property(e => e.TotalAmount).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.OrderDate).HasDefaultValueSql("datetime('now')");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+            
+            entity.HasOne(e => e.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+                
+            entity.HasOne(e => e.ApprovedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.ApprovedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // Configure PurchaseItem entity
+        modelBuilder.Entity<PurchaseItem>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Quantity).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.UnitPrice).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.TotalPrice).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+            
+            entity.HasOne(e => e.PurchaseOrder)
+                .WithMany(po => po.PurchaseItems)
+                .HasForeignKey(e => e.PurchaseOrderId)
+                .OnDelete(DeleteBehavior.Cascade);
+                
+            entity.HasOne(e => e.Product)
+                .WithMany()
+                .HasForeignKey(e => e.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+                
+            entity.HasOne(e => e.Warehouse)
+                .WithMany()
+                .HasForeignKey(e => e.WarehouseId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Configure SalesOrder entity
+        modelBuilder.Entity<SalesOrder>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.OrderNumber).IsUnique();
+            entity.Property(e => e.OrderNumber).IsRequired();
+            entity.Property(e => e.TotalAmount).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.OrderDate).HasDefaultValueSql("datetime('now')");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+            
+            entity.HasOne(e => e.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+                
+            entity.HasOne(e => e.ConfirmedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.ConfirmedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // Configure SalesItem entity
+        modelBuilder.Entity<SalesItem>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Quantity).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.UnitPrice).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.TotalPrice).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+            
+            entity.HasOne(e => e.SalesOrder)
+                .WithMany(so => so.SalesItems)
+                .HasForeignKey(e => e.SalesOrderId)
+                .OnDelete(DeleteBehavior.Cascade);
+                
+            entity.HasOne(e => e.Product)
+                .WithMany()
+                .HasForeignKey(e => e.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+                
+            entity.HasOne(e => e.Warehouse)
+                .WithMany()
+                .HasForeignKey(e => e.WarehouseId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Configure ProductAssembly entity
+        modelBuilder.Entity<ProductAssembly>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Quantity).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.SalePrice).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+            
+            entity.HasOne(e => e.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+                
+            entity.HasOne(e => e.CompletedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.CompletedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+                
+            entity.HasOne(e => e.Store)
+                .WithMany()
+                .HasForeignKey(e => e.StoreId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // Configure BillOfMaterial entity
+        modelBuilder.Entity<BillOfMaterial>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.RequiredQuantity).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.AvailableQuantity).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+            
+            entity.HasOne(e => e.ProductAssembly)
+                .WithMany(pa => pa.BillOfMaterials)
+                .HasForeignKey(e => e.ProductAssemblyId)
+                .OnDelete(DeleteBehavior.Cascade);
+                
+            entity.HasOne(e => e.RawProduct)
+                .WithMany()
+                .HasForeignKey(e => e.RawProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+                
+            entity.HasOne(e => e.Warehouse)
+                .WithMany()
+                .HasForeignKey(e => e.WarehouseId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Configure ProductRequest entity
+        modelBuilder.Entity<ProductRequest>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.RequestDate).HasDefaultValueSql("datetime('now')");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+            
+            entity.HasOne(e => e.RequestedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.RequestedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+                
+            entity.HasOne(e => e.ApprovedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.ApprovedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+                
+            entity.HasOne(e => e.Warehouse)
+                .WithMany()
+                .HasForeignKey(e => e.WarehouseId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Configure ProductRequestItem entity
+        modelBuilder.Entity<ProductRequestItem>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.QuantityRequested).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.QuantityApproved).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.QuantityReceived).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+            
+            entity.HasOne(e => e.ProductRequest)
+                .WithMany(pr => pr.ProductRequestItems)
+                .HasForeignKey(e => e.ProductRequestId)
+                .OnDelete(DeleteBehavior.Cascade);
+                
+            entity.HasOne(e => e.Product)
+                .WithMany()
+                .HasForeignKey(e => e.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Configure ProductMovement entity
+        modelBuilder.Entity<ProductMovement>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Quantity).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.MovementDate).HasDefaultValueSql("datetime('now')");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+            
+            entity.HasOne(e => e.Product)
+                .WithMany()
+                .HasForeignKey(e => e.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+                
+            entity.HasOne(e => e.Warehouse)
+                .WithMany()
+                .HasForeignKey(e => e.WarehouseId)
+                .OnDelete(DeleteBehavior.Restrict);
+                
+            entity.HasOne(e => e.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.CreatedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // Configure ProductMovementSummary entity
+        modelBuilder.Entity<ProductMovementSummary>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.OpeningBalance).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.TotalIn).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.TotalOut).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.ClosingBalance).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+            
+            entity.HasOne(e => e.Product)
+                .WithMany()
+                .HasForeignKey(e => e.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+                
+            entity.HasOne(e => e.Warehouse)
+                .WithMany()
+                .HasForeignKey(e => e.WarehouseId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Configure ShoppingCart entity
+        modelBuilder.Entity<ShoppingCart>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Quantity).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.UnitPrice).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("datetime('now')");
+            
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+                
+            entity.HasOne(e => e.Product)
+                .WithMany()
+                .HasForeignKey(e => e.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+                
+            // Ensure unique combination of User and Product
+            entity.HasIndex(e => new { e.UserId, e.ProductId }).IsUnique();
+        });
+
+        // Configure OrderTracking entity
+        modelBuilder.Entity<OrderTracking>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Status).IsRequired();
+            entity.Property(e => e.Timestamp).HasDefaultValueSql("datetime('now')");
+            
+            entity.HasOne(e => e.Order)
+                .WithMany()
+                .HasForeignKey(e => e.OrderId)
+                .OnDelete(DeleteBehavior.Cascade);
+                
+            entity.HasOne(e => e.UpdatedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.UpdatedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // Configure Customer entity
+        modelBuilder.Entity<Customer>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.FullName).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.PhoneNumber).HasMaxLength(20);
+            entity.Property(e => e.Email).HasMaxLength(255);
+            entity.Property(e => e.Address).HasMaxLength(500);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+            
+            // Ensure unique phone number
+            entity.HasIndex(e => e.PhoneNumber).IsUnique();
+        });
+
         // Seed initial data
         SeedData(modelBuilder);
     }
@@ -175,11 +472,6 @@ public class ApplicationDbContext : DbContext
             new Category { Id = 5, Name = "Cleaning Supplies", Description = "Cleaning and sanitization supplies", IsActive = true, CreatedAt = new DateTime(2023, 1, 1, 10, 0, 0, DateTimeKind.Utc) }
         );
 
-        // Seed initial warehouses
-        modelBuilder.Entity<Warehouse>().HasData(
-            new Warehouse { Id = 1, Name = "Main Warehouse", Address = "123 Industrial St", City = "Cairo", PhoneNumber = "+20-123-456-7890", ManagerName = "Ahmed Hassan", IsActive = true, CreatedAt = new DateTime(2023, 1, 1, 10, 0, 0, DateTimeKind.Utc) },
-            new Warehouse { Id = 2, Name = "Store Branch 1", Address = "456 Commercial Ave", City = "Alexandria", PhoneNumber = "+20-123-456-7891", ManagerName = "Fatma Ali", IsActive = true, CreatedAt = new DateTime(2023, 1, 1, 10, 0, 0, DateTimeKind.Utc) },
-            new Warehouse { Id = 3, Name = "Store Branch 2", Address = "789 Business Blvd", City = "Giza", PhoneNumber = "+20-123-456-7892", ManagerName = "Mohamed Salah", IsActive = true, CreatedAt = new DateTime(2023, 1, 1, 10, 0, 0, DateTimeKind.Utc) }
-        );
+        // Warehouses are seeded in SeedUsers.cs to avoid duplication
     }
 }

@@ -115,7 +115,8 @@ public class AuthController : ControllerBase
                 IsActive = user.IsActive,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt,
-                Roles = user.UserRoles.Select(ur => ur.Role.Name).ToList()
+                Roles = user.UserRoles.Select(ur => ur.Role.Name).ToList(),
+                AssignedStoreId = user.AssignedStoreId
             };
 
             return CreatedAtAction(nameof(GetCurrentUser), new { id = user.Id }, response);

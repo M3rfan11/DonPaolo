@@ -24,6 +24,10 @@ public class User
     
     public DateTime? UpdatedAt { get; set; }
     
+    // Store assignment for store-specific roles
+    public int? AssignedStoreId { get; set; }
+    
     // Navigation properties
     public virtual ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
+    public virtual Warehouse? AssignedStore { get; set; }
 }

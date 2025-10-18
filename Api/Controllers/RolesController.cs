@@ -10,7 +10,7 @@ namespace Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Admin")]
+[Authorize(Roles = "SuperAdmin")]
 public class RolesController : ControllerBase
 {
     private readonly ApplicationDbContext _context;

@@ -13,6 +13,9 @@ namespace Api.Models
         [Required]
         public decimal Quantity { get; set; }
         
+        [Required]
+        public decimal POSQuantity { get; set; } = 0; // Quantity available in POS system
+        
         [MaxLength(50)]
         public string? Unit { get; set; } // e.g., "piece", "box", "kg", "liter"
         

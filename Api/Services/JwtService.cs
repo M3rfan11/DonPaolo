@@ -91,7 +91,8 @@ public class JwtService : IJwtService
                 Email = user.Email,
                 IsActive = user.IsActive,
                 CreatedAt = user.CreatedAt,
-                Roles = roles
+                Roles = roles,
+                AssignedStoreId = user.AssignedStoreId
             }
         };
     }
@@ -141,7 +142,8 @@ public class JwtService : IJwtService
                 Email = user.Email,
                 IsActive = user.IsActive,
                 CreatedAt = user.CreatedAt,
-                Roles = roles
+                Roles = roles,
+                AssignedStoreId = user.AssignedStoreId
             }
         };
     }

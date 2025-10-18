@@ -47,7 +47,8 @@ public class UserProfileController : ControllerBase
                     IsActive = u.IsActive,
                     CreatedAt = u.CreatedAt,
                     UpdatedAt = u.UpdatedAt,
-                    Roles = u.UserRoles.Select(ur => ur.Role.Name).ToList()
+                    Roles = u.UserRoles.Select(ur => ur.Role.Name).ToList(),
+                    AssignedStoreId = u.AssignedStoreId
                 })
                 .FirstOrDefaultAsync();
 
@@ -94,7 +95,8 @@ public class UserProfileController : ControllerBase
                 IsActive = user.IsActive,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt,
-                Roles = user.UserRoles.Select(ur => ur.Role.Name).ToList()
+                Roles = user.UserRoles.Select(ur => ur.Role.Name).ToList(),
+                AssignedStoreId = user.AssignedStoreId
             });
 
             // Update fields if provided
@@ -125,7 +127,8 @@ public class UserProfileController : ControllerBase
                 IsActive = user.IsActive,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt,
-                Roles = user.UserRoles.Select(ur => ur.Role.Name).ToList()
+                Roles = user.UserRoles.Select(ur => ur.Role.Name).ToList(),
+                AssignedStoreId = user.AssignedStoreId
             });
 
             // Audit log
@@ -146,7 +149,8 @@ public class UserProfileController : ControllerBase
                 IsActive = user.IsActive,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt,
-                Roles = user.UserRoles.Select(ur => ur.Role.Name).ToList()
+                Roles = user.UserRoles.Select(ur => ur.Role.Name).ToList(),
+                AssignedStoreId = user.AssignedStoreId
             });
         }
         catch (Exception ex)
@@ -185,7 +189,8 @@ public class UserProfileController : ControllerBase
                 IsActive = user.IsActive,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt,
-                Roles = user.UserRoles.Select(ur => ur.Role.Name).ToList()
+                Roles = user.UserRoles.Select(ur => ur.Role.Name).ToList(),
+                AssignedStoreId = user.AssignedStoreId
             });
 
             // Remove user roles first (due to foreign key constraints)
@@ -243,7 +248,8 @@ public class UserProfileController : ControllerBase
                 IsActive = user.IsActive,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt,
-                Roles = user.UserRoles.Select(ur => ur.Role.Name).ToList()
+                Roles = user.UserRoles.Select(ur => ur.Role.Name).ToList(),
+                AssignedStoreId = user.AssignedStoreId
             });
 
             // Deactivate the account instead of deleting
@@ -260,7 +266,8 @@ public class UserProfileController : ControllerBase
                 IsActive = user.IsActive,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt,
-                Roles = user.UserRoles.Select(ur => ur.Role.Name).ToList()
+                Roles = user.UserRoles.Select(ur => ur.Role.Name).ToList(),
+                AssignedStoreId = user.AssignedStoreId
             });
 
             // Audit log
@@ -281,7 +288,8 @@ public class UserProfileController : ControllerBase
                 IsActive = user.IsActive,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt,
-                Roles = user.UserRoles.Select(ur => ur.Role.Name).ToList()
+                Roles = user.UserRoles.Select(ur => ur.Role.Name).ToList(),
+                AssignedStoreId = user.AssignedStoreId
             });
         }
         catch (Exception ex)

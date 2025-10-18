@@ -54,7 +54,7 @@ public class CategoryController : ControllerBase
     /// Get all categories including inactive ones (Admin only)
     /// </summary>
     [HttpGet("all")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "SuperAdmin,Admin")]
     public async Task<ActionResult<IEnumerable<CategoryResponse>>> GetAllCategories()
     {
         var categories = await _context.Categories
@@ -106,7 +106,7 @@ public class CategoryController : ControllerBase
     /// Create a new category (Admin only)
     /// </summary>
     [HttpPost]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "SuperAdmin,Admin")]
     public async Task<ActionResult<CategoryResponse>> CreateCategory([FromBody] CreateCategoryRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.Name))
@@ -162,7 +162,7 @@ public class CategoryController : ControllerBase
     /// Update a category (Admin only)
     /// </summary>
     [HttpPut("{id}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "SuperAdmin,Admin")]
     public async Task<ActionResult<CategoryResponse>> UpdateCategory(int id, [FromBody] UpdateCategoryRequest request)
     {
         var category = await _context.Categories.FindAsync(id);
@@ -231,7 +231,7 @@ public class CategoryController : ControllerBase
     /// Soft delete a category (Admin only)
     /// </summary>
     [HttpDelete("{id}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "SuperAdmin,Admin")]
     public async Task<IActionResult> DeleteCategory(int id)
     {
         var category = await _context.Categories.FindAsync(id);
@@ -273,7 +273,7 @@ public class CategoryController : ControllerBase
     /// Restore a soft-deleted category (Admin only)
     /// </summary>
     [HttpPatch("{id}/restore")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "SuperAdmin,Admin")]
     public async Task<ActionResult<CategoryResponse>> RestoreCategory(int id)
     {
         var category = await _context.Categories.FindAsync(id);

@@ -5,6 +5,7 @@ using System.Security.Claims;
 using Api.Data;
 using Api.DTOs;
 using Api.Services;
+using Api.Models;
 
 namespace Api.Controllers;
 
@@ -15,12 +16,14 @@ public class AdminController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
     private readonly IAuditService _auditService;
+    private readonly IRevenueTrackingService _revenueTrackingService;
     private readonly ILogger<AdminController> _logger;
 
-    public AdminController(ApplicationDbContext context, IAuditService auditService, ILogger<AdminController> logger)
+    public AdminController(ApplicationDbContext context, IAuditService auditService, IRevenueTrackingService revenueTrackingService, ILogger<AdminController> logger)
     {
         _context = context;
         _auditService = auditService;
+        _revenueTrackingService = revenueTrackingService;
         _logger = logger;
     }
 
@@ -113,6 +116,26 @@ public class AdminController : ControllerBase
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
+            // Assign roles if provided
+            if (request.Roles != null && request.Roles.Any())
+            {
+                var roles = await _context.Roles
+                    .Where(r => request.Roles.Contains(r.Name))
+                    .ToListAsync();
+
+                foreach (var role in roles)
+                {
+                    var userRole = new UserRole
+                    {
+                        UserId = user.Id,
+                        RoleId = role.Id,
+                        AssignedAt = DateTime.UtcNow
+                    };
+                    _context.UserRoles.Add(userRole);
+                }
+                await _context.SaveChangesAsync();
+            }
+
             // Load the user with roles for response
             await _context.Entry(user)
                 .Collection(u => u.UserRoles)
@@ -193,8 +216,15 @@ public class AdminController : ControllerBase
             if (request.IsActive.HasValue)
                 user.IsActive = request.IsActive.Value;
 
+            if (request.AssignedStoreId.HasValue)
+            {
+                user.AssignedStoreId = request.AssignedStoreId.Value;
+                _context.Entry(user).Property(u => u.AssignedStoreId).IsModified = true;
+            }
+
             user.UpdatedAt = DateTime.UtcNow;
 
+            _context.Users.Update(user);
             await _context.SaveChangesAsync();
 
             var after = System.Text.Json.JsonSerializer.Serialize(new UserResponse
@@ -205,6 +235,7 @@ public class AdminController : ControllerBase
                 IsActive = user.IsActive,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt,
+                AssignedStoreId = user.AssignedStoreId,
                 Roles = user.UserRoles.Select(ur => ur.Role.Name).ToList()
             });
 
@@ -227,6 +258,7 @@ public class AdminController : ControllerBase
                 IsActive = user.IsActive,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt,
+                AssignedStoreId = user.AssignedStoreId,
                 Roles = user.UserRoles.Select(ur => ur.Role.Name).ToList()
             });
         }
@@ -628,6 +660,240 @@ public class AdminController : ControllerBase
         {
             _logger.LogError(ex, "Error retrieving system statistics");
             return StatusCode(500, new { message = "An error occurred while retrieving system statistics" });
+        }
+    }
+
+    /// <summary>
+    /// Get sales data for a specific store
+    /// </summary>
+    [HttpGet("store/{storeId}/sales")]
+    public async Task<ActionResult<object>> GetStoreSales(int storeId, [FromQuery] DateTime? fromDate = null, [FromQuery] DateTime? toDate = null)
+    {
+        try
+        {
+            var startDate = fromDate ?? DateTime.UtcNow.AddDays(-30);
+            var endDate = toDate ?? DateTime.UtcNow;
+
+            // Get sales items for the specific store
+            var storeSales = await _context.SalesItems
+                .Include(si => si.SalesOrder)
+                .Include(si => si.Product)
+                .Include(si => si.Warehouse)
+                .Where(si => si.WarehouseId == storeId && si.SalesOrder.OrderDate >= startDate && si.SalesOrder.OrderDate <= endDate)
+                .Select(si => new
+                {
+                    SalesOrderId = si.SalesOrderId,
+                    OrderNumber = si.SalesOrder.OrderNumber,
+                    ProductId = si.ProductId,
+                    ProductName = si.Product.Name,
+                    ProductSKU = si.Product.SKU,
+                    Quantity = si.Quantity,
+                    UnitPrice = si.UnitPrice,
+                    TotalPrice = si.TotalPrice,
+                    Unit = si.Unit,
+                    OrderDate = si.SalesOrder.OrderDate,
+                    CustomerName = si.SalesOrder.CustomerName,
+                    PaymentStatus = si.SalesOrder.PaymentStatus,
+                    Status = si.SalesOrder.Status,
+                    CreatedByUserId = si.SalesOrder.CreatedByUserId,
+                    CreatedByUserName = _context.Users
+                        .Where(u => u.Id == si.SalesOrder.CreatedByUserId)
+                        .Select(u => u.FullName)
+                        .FirstOrDefault()
+                })
+                .OrderByDescending(si => si.OrderDate)
+                .ToListAsync();
+
+            // Calculate summary statistics
+            var totalRevenue = storeSales.Sum(s => s.TotalPrice);
+            var totalQuantity = storeSales.Sum(s => s.Quantity);
+            var uniqueOrders = storeSales.Select(s => s.SalesOrderId).Distinct().Count();
+            var uniqueProducts = storeSales.Select(s => s.ProductId).Distinct().Count();
+
+            return Ok(new
+            {
+                StoreId = storeId,
+                StoreName = await _context.Warehouses
+                    .Where(w => w.Id == storeId)
+                    .Select(w => w.Name)
+                    .FirstOrDefaultAsync(),
+                FromDate = startDate,
+                ToDate = endDate,
+                Summary = new
+                {
+                    TotalRevenue = totalRevenue,
+                    TotalQuantity = totalQuantity,
+                    TotalOrders = uniqueOrders,
+                    TotalProducts = uniqueProducts
+                },
+                Sales = storeSales
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving store sales data");
+            return StatusCode(500, new { message = "An error occurred while retrieving store sales data" });
+        }
+    }
+
+    /// <summary>
+    /// Get purchases data for a specific store
+    /// </summary>
+    [HttpGet("store/{storeId}/purchases")]
+    public async Task<ActionResult<object>> GetStorePurchases(int storeId, [FromQuery] DateTime? fromDate = null, [FromQuery] DateTime? toDate = null)
+    {
+        try
+        {
+            var startDate = fromDate ?? DateTime.UtcNow.AddDays(-30);
+            var endDate = toDate ?? DateTime.UtcNow;
+
+            // Get purchase items for the specific store
+            var storePurchases = await _context.PurchaseItems
+                .Include(pi => pi.PurchaseOrder)
+                .Include(pi => pi.Product)
+                .Include(pi => pi.Warehouse)
+                .Where(pi => pi.WarehouseId == storeId && pi.PurchaseOrder.OrderDate >= startDate && pi.PurchaseOrder.OrderDate <= endDate)
+                .Select(pi => new
+                {
+                    PurchaseOrderId = pi.PurchaseOrderId,
+                    OrderNumber = pi.PurchaseOrder.OrderNumber,
+                    ProductId = pi.ProductId,
+                    ProductName = pi.Product.Name,
+                    ProductSKU = pi.Product.SKU,
+                    Quantity = pi.Quantity,
+                    UnitPrice = pi.UnitPrice,
+                    TotalPrice = pi.TotalPrice,
+                    Unit = pi.Unit,
+                    OrderDate = pi.PurchaseOrder.OrderDate,
+                    SupplierName = pi.PurchaseOrder.SupplierName,
+                    Status = pi.PurchaseOrder.Status,
+                    CreatedByUserId = pi.PurchaseOrder.CreatedByUserId,
+                    CreatedByUserName = _context.Users
+                        .Where(u => u.Id == pi.PurchaseOrder.CreatedByUserId)
+                        .Select(u => u.FullName)
+                        .FirstOrDefault()
+                })
+                .OrderByDescending(pi => pi.OrderDate)
+                .ToListAsync();
+
+            // Calculate summary statistics
+            var totalCost = storePurchases.Sum(p => p.TotalPrice);
+            var totalQuantity = storePurchases.Sum(p => p.Quantity);
+            var uniqueOrders = storePurchases.Select(p => p.PurchaseOrderId).Distinct().Count();
+            var uniqueProducts = storePurchases.Select(p => p.ProductId).Distinct().Count();
+
+            return Ok(new
+            {
+                StoreId = storeId,
+                StoreName = await _context.Warehouses
+                    .Where(w => w.Id == storeId)
+                    .Select(w => w.Name)
+                    .FirstOrDefaultAsync(),
+                FromDate = startDate,
+                ToDate = endDate,
+                Summary = new
+                {
+                    TotalCost = totalCost,
+                    TotalQuantity = totalQuantity,
+                    TotalOrders = uniqueOrders,
+                    TotalProducts = uniqueProducts
+                },
+                Purchases = storePurchases
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving store purchases data");
+            return StatusCode(500, new { message = "An error occurred while retrieving store purchases data" });
+        }
+    }
+
+    /// <summary>
+    /// Get all stores with their sales and purchase summaries
+    /// </summary>
+    [HttpGet("stores/summary")]
+    public async Task<ActionResult<object>> GetStoresSummary([FromQuery] DateTime? fromDate = null, [FromQuery] DateTime? toDate = null)
+    {
+        try
+        {
+            var startDate = fromDate ?? DateTime.UtcNow.AddDays(-30);
+            var endDate = toDate ?? DateTime.UtcNow;
+
+            var stores = await _context.Warehouses
+                .Where(w => w.IsActive)
+                .Select(w => new
+                {
+                    w.Id,
+                    w.Name,
+                    w.Address,
+                    w.City,
+                    w.ManagerName
+                })
+                .ToListAsync();
+
+            var storeSummaries = new List<object>();
+
+            foreach (var store in stores)
+            {
+                // Get sales summary for this store
+                var salesSummary = await _context.SalesItems
+                    .Include(si => si.SalesOrder)
+                    .Where(si => si.WarehouseId == store.Id && si.SalesOrder.OrderDate >= startDate && si.SalesOrder.OrderDate <= endDate)
+                    .GroupBy(si => si.SalesOrderId)
+                    .Select(g => new
+                    {
+                        OrderId = g.Key,
+                        TotalAmount = g.Sum(si => si.TotalPrice),
+                        OrderDate = g.First().SalesOrder.OrderDate
+                    })
+                    .ToListAsync();
+
+                // Get purchases summary for this store
+                var purchasesSummary = await _context.PurchaseItems
+                    .Include(pi => pi.PurchaseOrder)
+                    .Where(pi => pi.WarehouseId == store.Id && pi.PurchaseOrder.OrderDate >= startDate && pi.PurchaseOrder.OrderDate <= endDate)
+                    .GroupBy(pi => pi.PurchaseOrderId)
+                    .Select(g => new
+                    {
+                        OrderId = g.Key,
+                        TotalAmount = g.Sum(pi => pi.TotalPrice),
+                        OrderDate = g.First().PurchaseOrder.OrderDate
+                    })
+                    .ToListAsync();
+
+                // Use revenue tracking service for real-time totals
+                var storeRevenue = await _revenueTrackingService.GetStoreRevenueAsync(store.Id);
+                var storeCosts = await _revenueTrackingService.GetStoreCostsAsync(store.Id);
+
+                storeSummaries.Add(new
+                {
+                    Store = store,
+                    SalesSummary = new
+                    {
+                        TotalRevenue = storeRevenue, // Real-time revenue
+                        TotalOrders = salesSummary.Count,
+                        RecentOrders = salesSummary.OrderByDescending(s => s.OrderDate).Take(5)
+                    },
+                    PurchasesSummary = new
+                    {
+                        TotalCost = storeCosts, // Real-time costs
+                        TotalOrders = purchasesSummary.Count,
+                        RecentOrders = purchasesSummary.OrderByDescending(p => p.OrderDate).Take(5)
+                    }
+                });
+            }
+
+            return Ok(new
+            {
+                FromDate = startDate,
+                ToDate = endDate,
+                Stores = storeSummaries
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving stores summary");
+            return StatusCode(500, new { message = "An error occurred while retrieving stores summary" });
         }
     }
 

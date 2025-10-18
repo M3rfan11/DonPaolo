@@ -48,6 +48,7 @@ public class ProductController : ControllerBase
                 Unit = p.Unit,
                 SKU = p.SKU,
                 Brand = p.Brand,
+                ImageUrl = p.ImageUrl,
                 CategoryName = p.Category.Name,
                 IsActive = p.IsActive,
                 TotalQuantity = p.ProductInventories.Sum(pi => pi.Quantity)
@@ -62,7 +63,7 @@ public class ProductController : ControllerBase
     /// Get all products including inactive ones (Admin only)
     /// </summary>
     [HttpGet("all")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "SuperAdmin,Admin")]
     public async Task<ActionResult<IEnumerable<ProductResponse>>> GetAllProducts()
     {
         var products = await _context.Products
@@ -80,12 +81,13 @@ public class ProductController : ControllerBase
                 Brand = p.Brand,
                 Weight = p.Weight,
                 Dimensions = p.Dimensions,
+                ImageUrl = p.ImageUrl,
                 CategoryId = p.CategoryId,
                 CategoryName = p.Category.Name,
                 IsActive = p.IsActive,
                 CreatedAt = p.CreatedAt,
                 UpdatedAt = p.UpdatedAt,
-                TotalQuantity = p.ProductInventories.Sum(pi => pi.Quantity),
+                TotalQuantity = p.ProductInventories.Sum(pi => pi.Quantity + pi.POSQuantity),
                 Inventories = p.ProductInventories.Select(pi => new ProductInventoryResponse
                 {
                     Id = pi.Id,
@@ -125,12 +127,13 @@ public class ProductController : ControllerBase
                 Brand = p.Brand,
                 Weight = p.Weight,
                 Dimensions = p.Dimensions,
+                ImageUrl = p.ImageUrl,
                 CategoryId = p.CategoryId,
                 CategoryName = p.Category.Name,
                 IsActive = p.IsActive,
                 CreatedAt = p.CreatedAt,
                 UpdatedAt = p.UpdatedAt,
-                TotalQuantity = p.ProductInventories.Sum(pi => pi.Quantity),
+                TotalQuantity = p.ProductInventories.Sum(pi => pi.Quantity + pi.POSQuantity),
                 Inventories = p.ProductInventories.Select(pi => new ProductInventoryResponse
                 {
                     Id = pi.Id,
@@ -156,7 +159,7 @@ public class ProductController : ControllerBase
     /// Create a new product (Admin only)
     /// </summary>
     [HttpPost]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "SuperAdmin,Admin")]
     public async Task<ActionResult<ProductResponse>> CreateProduct([FromBody] CreateProductRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.Name))
@@ -193,6 +196,7 @@ public class ProductController : ControllerBase
             Brand = request.Brand?.Trim(),
             Weight = request.Weight,
             Dimensions = request.Dimensions?.Trim(),
+            ImageUrl = request.ImageUrl?.Trim(),
             CategoryId = request.CategoryId,
             IsActive = request.IsActive,
             CreatedAt = DateTime.UtcNow
@@ -238,7 +242,7 @@ public class ProductController : ControllerBase
     /// Update a product (Admin only)
     /// </summary>
     [HttpPut("{id}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "SuperAdmin,Admin")]
     public async Task<ActionResult<ProductResponse>> UpdateProduct(int id, [FromBody] UpdateProductRequest request)
     {
         var product = await _context.Products
@@ -302,6 +306,11 @@ public class ProductController : ControllerBase
         if (request.Dimensions != null)
         {
             product.Dimensions = request.Dimensions.Trim();
+        }
+
+        if (request.ImageUrl != null)
+        {
+            product.ImageUrl = request.ImageUrl.Trim();
         }
 
         if (request.CategoryId.HasValue)
@@ -373,7 +382,7 @@ public class ProductController : ControllerBase
     /// Soft delete a product (Admin only)
     /// </summary>
     [HttpDelete("{id}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "SuperAdmin,Admin")]
     public async Task<IActionResult> DeleteProduct(int id)
     {
         var product = await _context.Products.FindAsync(id);
@@ -408,7 +417,7 @@ public class ProductController : ControllerBase
     /// Update product inventory in a specific warehouse (Admin only)
     /// </summary>
     [HttpPut("{id}/inventory/{warehouseId}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "SuperAdmin,Admin")]
     public async Task<ActionResult<ProductInventoryResponse>> UpdateInventory(int id, int warehouseId, [FromBody] UpdateInventoryRequest request)
     {
         var product = await _context.Products.FindAsync(id);

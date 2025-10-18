@@ -25,14 +25,42 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet]
-    [Authorize(Roles = "Admin,Manager")]
+    [Authorize(Roles = "SuperAdmin,StoreManager")]
     public async Task<ActionResult<IEnumerable<UserResponse>>> GetUsers()
     {
         try
         {
-            var users = await _context.Users
+            var currentUserId = GetCurrentUserId();
+            var currentUserRoles = await GetCurrentUserRoles(currentUserId);
+            
+            IQueryable<Api.Models.User> usersQuery = _context.Users
                 .Include(u => u.UserRoles)
-                .ThenInclude(ur => ur.Role)
+                .ThenInclude(ur => ur.Role);
+
+            // Apply role-based filtering
+            if (currentUserRoles.Contains("SuperAdmin"))
+            {
+                // SuperAdmin can see all users
+                usersQuery = usersQuery.Where(u => u.IsActive);
+            }
+            else if (currentUserRoles.Contains("StoreManager"))
+            {
+                // StoreManager can only see users assigned to their store
+                var currentUser = await _context.Users.FindAsync(currentUserId);
+                if (currentUser?.AssignedStoreId == null)
+                {
+                    _logger.LogWarning("StoreManager {UserId} is not assigned to any store, returning empty user list", currentUserId);
+                    return Ok(new List<UserResponse>());
+                }
+                
+                usersQuery = usersQuery.Where(u => u.AssignedStoreId == currentUser.AssignedStoreId && u.IsActive);
+            }
+            else
+            {
+                return StatusCode(403, new { Message = "You don't have permission to view users" });
+            }
+
+            var users = await usersQuery
                 .Select(u => new UserResponse
                 {
                     Id = u.Id,
@@ -41,7 +69,8 @@ public class UsersController : ControllerBase
                     IsActive = u.IsActive,
                     CreatedAt = u.CreatedAt,
                     UpdatedAt = u.UpdatedAt,
-                    Roles = u.UserRoles.Select(ur => ur.Role.Name).ToList()
+                    Roles = u.UserRoles.Select(ur => ur.Role.Name).ToList(),
+                    AssignedStoreId = u.AssignedStoreId
                 })
                 .ToListAsync();
 
@@ -55,15 +84,43 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    [Authorize(Roles = "Admin,Manager")]
+    [Authorize(Roles = "SuperAdmin,StoreManager")]
     public async Task<ActionResult<UserResponse>> GetUser(int id)
     {
         try
         {
-            var user = await _context.Users
+            var currentUserId = GetCurrentUserId();
+            var currentUserRoles = await GetCurrentUserRoles(currentUserId);
+            
+            IQueryable<Api.Models.User> userQuery = _context.Users
                 .Include(u => u.UserRoles)
                 .ThenInclude(ur => ur.Role)
-                .Where(u => u.Id == id)
+                .Where(u => u.Id == id);
+
+            // Apply role-based filtering
+            if (currentUserRoles.Contains("SuperAdmin"))
+            {
+                // SuperAdmin can see any user
+                userQuery = userQuery.Where(u => u.IsActive);
+            }
+            else if (currentUserRoles.Contains("StoreManager"))
+            {
+                // StoreManager can only see users assigned to their store
+                var currentUser = await _context.Users.FindAsync(currentUserId);
+                if (currentUser?.AssignedStoreId == null)
+                {
+                    _logger.LogWarning("StoreManager {UserId} is not assigned to any store, cannot view user", currentUserId);
+                    return StatusCode(403, new { Message = "You are not assigned to any store" });
+                }
+                
+                userQuery = userQuery.Where(u => u.AssignedStoreId == currentUser.AssignedStoreId && u.IsActive);
+            }
+            else
+            {
+                return StatusCode(403, new { Message = "You don't have permission to view this user" });
+            }
+
+            var user = await userQuery
                 .Select(u => new UserResponse
                 {
                     Id = u.Id,
@@ -72,7 +129,8 @@ public class UsersController : ControllerBase
                     IsActive = u.IsActive,
                     CreatedAt = u.CreatedAt,
                     UpdatedAt = u.UpdatedAt,
-                    Roles = u.UserRoles.Select(ur => ur.Role.Name).ToList()
+                    Roles = u.UserRoles.Select(ur => ur.Role.Name).ToList(),
+                    AssignedStoreId = u.AssignedStoreId
                 })
                 .FirstOrDefaultAsync();
 
@@ -91,7 +149,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "SuperAdmin")]
     public async Task<ActionResult<UserResponse>> CreateUser([FromBody] CreateUserRequest request)
     {
         try
@@ -150,7 +208,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPatch("{id}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "SuperAdmin")]
     public async Task<ActionResult<UserResponse>> UpdateUser(int id, [FromBody] UpdateUserRequest request)
     {
         try
@@ -240,7 +298,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpDelete("{id}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "SuperAdmin")]
     public async Task<ActionResult> DeleteUser(int id)
     {
         try
@@ -284,7 +342,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost("{id}/roles")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "SuperAdmin")]
     public async Task<ActionResult> AssignRole(int id, [FromBody] AssignRoleRequest request)
     {
         try
@@ -340,7 +398,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpDelete("{id}/roles/{roleId}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "SuperAdmin")]
     public async Task<ActionResult> RemoveRole(int id, int roleId)
     {
         try
@@ -381,5 +439,152 @@ public class UsersController : ControllerBase
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
         return userIdClaim != null && int.TryParse(userIdClaim.Value, out var userId) ? userId : null;
+    }
+
+    private async Task<List<string>> GetCurrentUserRoles(int? userId)
+    {
+        if (userId == null) return new List<string>();
+        
+        return await _context.UserRoles
+            .Where(ur => ur.UserId == userId)
+            .Select(ur => ur.Role.Name)
+            .ToListAsync();
+    }
+
+    /// <summary>
+    /// Assign user to store (StoreManager only)
+    /// </summary>
+    [HttpPost("{id}/assign-store")]
+    [Authorize(Roles = "SuperAdmin,StoreManager")]
+    public async Task<ActionResult> AssignUserToStore(int id, [FromBody] AssignUserToStoreRequest request)
+    {
+        try
+        {
+            var currentUserId = GetCurrentUserId();
+            var currentUserRoles = await GetCurrentUserRoles(currentUserId);
+            
+            // Check if user has permission to assign users to stores
+            if (!currentUserRoles.Contains("SuperAdmin") && !currentUserRoles.Contains("StoreManager"))
+            {
+                return StatusCode(403, new { Message = "You don't have permission to assign users to stores" });
+            }
+
+            var userToAssign = await _context.Users.FindAsync(id);
+            if (userToAssign == null)
+            {
+                return NotFound(new { message = "User not found" });
+            }
+
+            var store = await _context.Warehouses.FindAsync(request.StoreId);
+            if (store == null)
+            {
+                return NotFound(new { message = "Store not found" });
+            }
+
+            // If current user is StoreManager, they can only assign users to their own store
+            if (currentUserRoles.Contains("StoreManager") && !currentUserRoles.Contains("SuperAdmin"))
+            {
+                var currentUser = await _context.Users.FindAsync(currentUserId);
+                if (currentUser?.AssignedStoreId != request.StoreId)
+                {
+                    return StatusCode(403, new { Message = "You can only assign users to your own store" });
+                }
+            }
+
+            // Check if user is a StoreManager and if they're already managing another store
+            var userRoles = await _context.UserRoles
+                .Where(ur => ur.UserId == id)
+                .Include(ur => ur.Role)
+                .Select(ur => ur.Role.Name)
+                .ToListAsync();
+
+            if (userRoles.Contains("StoreManager"))
+            {
+                var existingManagerStore = await _context.Warehouses
+                    .FirstOrDefaultAsync(w => w.ManagerUserId == id && w.IsActive && w.Id != request.StoreId);
+                
+                if (existingManagerStore != null)
+                {
+                    return BadRequest(new { Message = $"User is already managing store '{existingManagerStore.Name}'. A manager can only manage one store at a time." });
+                }
+            }
+
+            userToAssign.AssignedStoreId = request.StoreId;
+            await _context.SaveChangesAsync();
+
+            // Audit log
+            await _auditService.LogAsync(
+                "User",
+                id.ToString(),
+                "AssignToStore",
+                before: $"User was assigned to store {userToAssign.AssignedStoreId}",
+                after: $"User assigned to store {request.StoreId}",
+                actorUserId: currentUserId
+            );
+
+            return Ok(new { message = "User assigned to store successfully" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error assigning user {UserId} to store {StoreId}", id, request.StoreId);
+            return StatusCode(500, new { message = "An error occurred while assigning the user to store" });
+        }
+    }
+
+    /// <summary>
+    /// Remove user from store (StoreManager only)
+    /// </summary>
+    [HttpPost("{id}/remove-store")]
+    [Authorize(Roles = "SuperAdmin,StoreManager")]
+    public async Task<ActionResult> RemoveUserFromStore(int id)
+    {
+        try
+        {
+            var currentUserId = GetCurrentUserId();
+            var currentUserRoles = await GetCurrentUserRoles(currentUserId);
+            
+            // Check if user has permission to remove users from stores
+            if (!currentUserRoles.Contains("SuperAdmin") && !currentUserRoles.Contains("StoreManager"))
+            {
+                return StatusCode(403, new { Message = "You don't have permission to remove users from stores" });
+            }
+
+            var userToRemove = await _context.Users.FindAsync(id);
+            if (userToRemove == null)
+            {
+                return NotFound(new { message = "User not found" });
+            }
+
+            // If current user is StoreManager, they can only remove users from their own store
+            if (currentUserRoles.Contains("StoreManager") && !currentUserRoles.Contains("SuperAdmin"))
+            {
+                var currentUser = await _context.Users.FindAsync(currentUserId);
+                if (currentUser?.AssignedStoreId != userToRemove.AssignedStoreId)
+                {
+                    return StatusCode(403, new { Message = "You can only remove users from your own store" });
+                }
+            }
+
+            var oldStoreId = userToRemove.AssignedStoreId;
+            userToRemove.AssignedStoreId = null;
+            await _context.SaveChangesAsync();
+
+            // Audit log
+            await _auditService.LogAsync(
+                "User",
+                id.ToString(),
+                "RemoveFromStore",
+                before: $"User was assigned to store {oldStoreId}",
+                after: "User removed from store",
+                actorUserId: currentUserId
+            );
+
+            return Ok(new { message = "User removed from store successfully" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error removing user {UserId} from store", id);
+            return StatusCode(500, new { message = "An error occurred while removing the user from store" });
+        }
     }
 }

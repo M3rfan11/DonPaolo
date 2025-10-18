@@ -10,6 +10,7 @@ namespace Api.DTOs
         public string? Brand { get; set; }
         public decimal? Weight { get; set; }
         public string? Dimensions { get; set; }
+        public string? ImageUrl { get; set; }
         public int CategoryId { get; set; }
         public bool IsActive { get; set; } = true;
     }
@@ -24,6 +25,7 @@ namespace Api.DTOs
         public string? Brand { get; set; }
         public decimal? Weight { get; set; }
         public string? Dimensions { get; set; }
+        public string? ImageUrl { get; set; }
         public int? CategoryId { get; set; }
         public bool? IsActive { get; set; }
     }
@@ -39,6 +41,7 @@ namespace Api.DTOs
         public string? Brand { get; set; }
         public decimal? Weight { get; set; }
         public string? Dimensions { get; set; }
+        public string? ImageUrl { get; set; }
         public int CategoryId { get; set; }
         public string CategoryName { get; set; } = string.Empty;
         public bool IsActive { get; set; }
@@ -57,6 +60,7 @@ namespace Api.DTOs
         public string? Unit { get; set; }
         public string? SKU { get; set; }
         public string? Brand { get; set; }
+        public string? ImageUrl { get; set; }
         public string CategoryName { get; set; } = string.Empty;
         public bool IsActive { get; set; }
         public decimal TotalQuantity { get; set; }
@@ -65,8 +69,23 @@ namespace Api.DTOs
     public class ProductInventoryResponse
     {
         public int Id { get; set; }
+        public int ProductId { get; set; }
+        public string ProductName { get; set; } = string.Empty;
+        public string ProductSKU { get; set; } = string.Empty;
         public int WarehouseId { get; set; }
         public string WarehouseName { get; set; } = string.Empty;
+        public decimal Quantity { get; set; }
+        public string? Unit { get; set; }
+        public decimal? MinimumStockLevel { get; set; }
+        public decimal? MaximumStockLevel { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
+    }
+
+    public class CreateProductInventoryRequest
+    {
+        public int ProductId { get; set; }
+        public int WarehouseId { get; set; }
         public decimal Quantity { get; set; }
         public string? Unit { get; set; }
         public decimal? MinimumStockLevel { get; set; }

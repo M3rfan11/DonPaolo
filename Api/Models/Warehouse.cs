@@ -33,5 +33,6 @@ namespace Api.Models
         // Navigation properties
         public virtual User? ManagerUser { get; set; } // Navigation to assigned manager
         public virtual ICollection<ProductInventory> ProductInventories { get; set; } = new List<ProductInventory>();
+        public virtual ICollection<User> AssignedUsers { get; set; } = new List<User>(); // Users assigned to this store
     }
 }

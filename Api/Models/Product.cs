@@ -25,6 +25,9 @@ namespace Api.Models
         [MaxLength(100)]
         public string? Brand { get; set; }
         
+        [MaxLength(500)]
+        public string? ImageUrl { get; set; } // URL for product image
+        
         public decimal? Weight { get; set; } // in kg
         
         [MaxLength(50)]

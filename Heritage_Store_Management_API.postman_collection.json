@@ -1,0 +1,792 @@
+{
+  "info": {
+    "name": "Heritage Store Management API",
+    "description": "Complete API collection for Heritage Store Management System with RBAC",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5152",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@company.com\",\n  \"password\": \"admin123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/Auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "Auth", "login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('authToken', response.token);",
+                  "    console.log('Token saved:', response.token);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"Password123!\",\n  \"confirmPassword\": \"Password123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/Auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "Auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/Auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "Auth", "refresh"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Get Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/Dashboard/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "Dashboard", "stats"]
+            }
+          }
+        },
+        {
+          "name": "Get Recent Activities",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/Dashboard/recent-activities",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "Dashboard", "recent-activities"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users Management",
+      "item": [
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/Users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "Users"]
+            }
+          }
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/Users/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "Users", "1"]
+            }
+          }
+        },
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Jane Smith\",\n  \"email\": \"jane.smith@heritage.com\",\n  \"password\": \"Password123!\",\n  \"roles\": [\"StoreManager\"],\n  \"assignedStoreId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/Users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "Users"]
+            }
+          }
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Jane Smith Updated\",\n  \"email\": \"jane.smith@heritage.com\",\n  \"roles\": [\"StoreManager\"],\n  \"assignedStoreId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/Users/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "Users", "1"]
+            }
+          }
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/Users/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "Users", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Products Management",
+      "item": [
+        {
+          "name": "Get All Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/Product",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "Product"]
+            }
+          }
+        },
+        {
+          "name": "Get Product by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/Product/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "Product", "1"]
+            }
+          }
+        },
+        {
+          "name": "Create Product",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Heritage Perfume\",\n  \"description\": \"Premium fragrance collection\",\n  \"price\": 99.99,\n  \"categoryId\": 1,\n  \"sku\": \"HP001\",\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/Product",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "Product"]
+            }
+          }
+        },
+        {
+          "name": "Update Product",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Heritage Perfume Updated\",\n  \"description\": \"Premium fragrance collection - Updated\",\n  \"price\": 109.99,\n  \"categoryId\": 1,\n  \"sku\": \"HP001\",\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/Product/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "Product", "1"]
+            }
+          }
+        },
+        {
+          "name": "Delete Product",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/Product/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "Product", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Inventory Management",
+      "item": [
+        {
+          "name": "Get All Inventory",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ProductInventory",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ProductInventory"]
+            }
+          }
+        },
+        {
+          "name": "Get Inventory by Store",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ProductInventory/store/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ProductInventory", "store", "1"]
+            }
+          }
+        },
+        {
+          "name": "Update Inventory",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 50,\n  \"minimumStockLevel\": 10,\n  \"maximumStockLevel\": 100\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ProductInventory/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ProductInventory", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sales Management",
+      "item": [
+        {
+          "name": "Get All Sales Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/Sales",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "Sales"]
+            }
+          }
+        },
+        {
+          "name": "Get Sales Order by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/Sales/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "Sales", "1"]
+            }
+          }
+        },
+        {
+          "name": "Create Sales Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"John Customer\",\n  \"customerEmail\": \"john@example.com\",\n  \"items\": [\n    {\n      \"productId\": 1,\n      \"quantity\": 2,\n      \"unitPrice\": 99.99\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/Sales",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "Sales"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Purchase Management",
+      "item": [
+        {
+          "name": "Get All Purchase Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/Purchase",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "Purchase"]
+            }
+          }
+        },
+        {
+          "name": "Get Purchase Order by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/Purchase/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "Purchase", "1"]
+            }
+          }
+        },
+        {
+          "name": "Create Purchase Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"supplierName\": \"Supplier Co\",\n  \"supplierEmail\": \"supplier@example.com\",\n  \"items\": [\n    {\n      \"productId\": 1,\n      \"quantity\": 10,\n      \"unitPrice\": 50.00\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/Purchase",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "Purchase"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Product Requests",
+      "item": [
+        {
+          "name": "Get All Requests",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ProductRequest",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ProductRequest"]
+            }
+          }
+        },
+        {
+          "name": "Create Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"requestType\": \"Restock\",\n  \"priority\": \"High\",\n  \"items\": [\n    {\n      \"productId\": 1,\n      \"requestedQuantity\": 20,\n      \"reason\": \"Low stock\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ProductRequest",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ProductRequest"]
+            }
+          }
+        },
+        {
+          "name": "Approve Request",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Approved\",\n  \"notes\": \"Approved for restocking\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ProductRequest/1/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ProductRequest", "1", "approve"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Product Assembly",
+      "item": [
+        {
+          "name": "Get All Assemblies",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ProductAssembly",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ProductAssembly"]
+            }
+          }
+        },
+        {
+          "name": "Create Assembly",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Heritage Gift Set\",\n  \"description\": \"Premium gift set\",\n  \"salePrice\": 199.99,\n  \"isActive\": true,\n  \"materials\": [\n    {\n      \"productId\": 1,\n      \"quantity\": 2\n    },\n    {\n      \"productId\": 2,\n      \"quantity\": 1\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ProductAssembly",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ProductAssembly"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "POS System",
+      "item": [
+        {
+          "name": "Get POS Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/POS/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "POS", "products"]
+            }
+          }
+        },
+        {
+          "name": "Process Sale",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": 1,\n      \"quantity\": 1,\n      \"unitPrice\": 99.99\n    }\n  ],\n  \"paymentMethod\": \"Cash\",\n  \"customerName\": \"Walk-in Customer\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/POS/sale",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "POS", "sale"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reports & Analytics",
+      "item": [
+        {
+          "name": "Get Sales Report",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/Reports/sales?year=2024&quarter=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "Reports", "sales"],
+              "query": [
+                {
+                  "key": "year",
+                  "value": "2024"
+                },
+                {
+                  "key": "quarter",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Purchase Report",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/Reports/purchases?year=2024&quarter=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "Reports", "purchases"],
+              "query": [
+                {
+                  "key": "year",
+                  "value": "2024"
+                },
+                {
+                  "key": "quarter",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Peak Sales Analysis",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/Reports/peak-sales?year=2024",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "Reports", "peak-sales"],
+              "query": [
+                {
+                  "key": "year",
+                  "value": "2024"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Categories",
+      "item": [
+        {
+          "name": "Get All Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/Category",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "Category"]
+            }
+          }
+        },
+        {
+          "name": "Create Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Premium Fragrances\",\n  \"description\": \"High-end perfume collection\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/Category",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "Category"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Stores/Warehouses",
+      "item": [
+        {
+          "name": "Get All Stores",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/Warehouse",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "Warehouse"]
+            }
+          }
+        },
+        {
+          "name": "Create Store",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Heritage Downtown Store\",\n  \"address\": \"123 Main Street\",\n  \"city\": \"New York\",\n  \"phoneNumber\": \"+1-555-0123\",\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/Warehouse",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "Warehouse"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Customer Orders",
+      "item": [
+        {
+          "name": "Get All Customer Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/CustomerOrder",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "CustomerOrder"]
+            }
+          }
+        },
+        {
+          "name": "Create Customer Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": 1,\n  \"items\": [\n    {\n      \"productId\": 1,\n      \"quantity\": 1,\n      \"unitPrice\": 99.99\n    }\n  ],\n  \"shippingAddress\": \"123 Customer St\",\n  \"notes\": \"Gift wrapping requested\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/CustomerOrder",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "CustomerOrder"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/Health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "Health"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
