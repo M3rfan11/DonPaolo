@@ -68,26 +68,23 @@ jobs:
       run: npm run build --prefix frontend
     
     - name: Test (Skip if no tests)
+      env:
+        CI: true
       run: |
-        if npm test --prefix frontend -- --coverage --watchAll=false --passWithNoTests 2>/dev/null; then
-          echo "Tests passed"
-        else
-          echo "No tests found or tests skipped - continuing..."
-        fi
+        npm test --prefix frontend -- --coverage --watchAll=false --passWithNoTests --ci || echo "Tests skipped or failed - continuing..."
       continue-on-error: true
     
     - name: Lint (Skip if no lint script)
       run: |
-        if npm run lint --prefix frontend 2>/dev/null; then
-          echo "Linting passed"
-        else
-          echo "No lint script found - skipping..."
-        fi
+        npm run lint --prefix frontend || echo "No lint script found - skipping..."
       continue-on-error: true
 
   security-scan:
     runs-on: ubuntu-latest
     continue-on-error: true  # Don't fail the pipeline on security scan
+    permissions:
+      security-events: write
+      contents: read
     
     steps:
     - uses: actions/checkout@v4
@@ -101,7 +98,7 @@ jobs:
         output: 'trivy-results.sarif'
     
     - name: Upload Trivy scan results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v3
+      uses: github/codeql-action/upload-sarif@v4
       if: always()
       with:
         sarif_file: 'trivy-results.sarif'
