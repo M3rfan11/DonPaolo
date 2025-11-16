@@ -66,7 +66,7 @@ namespace Api.Migrations
 
                     b.HasIndex("Entity", "EntityId");
 
-                    b.ToTable("AuditLogs");
+                    b.ToTable("AuditLogs", (string)null);
                 });
 
             modelBuilder.Entity("Api.Models.BillOfMaterial", b =>
@@ -114,7 +114,7 @@ namespace Api.Migrations
 
                     b.HasIndex("WarehouseId");
 
-                    b.ToTable("BillOfMaterials");
+                    b.ToTable("BillOfMaterials", (string)null);
                 });
 
             modelBuilder.Entity("Api.Models.Category", b =>
@@ -148,7 +148,7 @@ namespace Api.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("Categories");
+                    b.ToTable("Categories", (string)null);
                 });
 
             modelBuilder.Entity("Api.Models.Customer", b =>
@@ -190,7 +190,7 @@ namespace Api.Migrations
                     b.HasIndex("PhoneNumber")
                         .IsUnique();
 
-                    b.ToTable("Customers");
+                    b.ToTable("Customers", (string)null);
                 });
 
             modelBuilder.Entity("Api.Models.OrderTracking", b =>
@@ -229,7 +229,7 @@ namespace Api.Migrations
 
                     b.HasIndex("UpdatedByUserId");
 
-                    b.ToTable("OrderTrackings");
+                    b.ToTable("OrderTrackings", (string)null);
                 });
 
             modelBuilder.Entity("Api.Models.Product", b =>
@@ -294,7 +294,7 @@ namespace Api.Migrations
                     b.HasIndex("SKU")
                         .IsUnique();
 
-                    b.ToTable("Products");
+                    b.ToTable("Products", (string)null);
                 });
 
             modelBuilder.Entity("Api.Models.ProductAssembly", b =>
@@ -369,7 +369,7 @@ namespace Api.Migrations
 
                     b.HasIndex("StoreId");
 
-                    b.ToTable("ProductAssemblies");
+                    b.ToTable("ProductAssemblies", (string)null);
                 });
 
             modelBuilder.Entity("Api.Models.ProductInventory", b =>
@@ -415,7 +415,7 @@ namespace Api.Migrations
                     b.HasIndex("ProductId", "WarehouseId")
                         .IsUnique();
 
-                    b.ToTable("ProductInventories");
+                    b.ToTable("ProductInventories", (string)null);
                 });
 
             modelBuilder.Entity("Api.Models.ProductMovement", b =>
@@ -487,7 +487,7 @@ namespace Api.Migrations
 
                     b.HasIndex("WarehouseId");
 
-                    b.ToTable("ProductMovements");
+                    b.ToTable("ProductMovements", (string)null);
                 });
 
             modelBuilder.Entity("Api.Models.ProductMovementSummary", b =>
@@ -546,7 +546,7 @@ namespace Api.Migrations
 
                     b.HasIndex("WarehouseId");
 
-                    b.ToTable("ProductMovementSummaries");
+                    b.ToTable("ProductMovementSummaries", (string)null);
                 });
 
             modelBuilder.Entity("Api.Models.ProductRequest", b =>
@@ -604,7 +604,7 @@ namespace Api.Migrations
 
                     b.HasIndex("WarehouseId");
 
-                    b.ToTable("ProductRequests");
+                    b.ToTable("ProductRequests", (string)null);
                 });
 
             modelBuilder.Entity("Api.Models.ProductRequestItem", b =>
@@ -650,7 +650,7 @@ namespace Api.Migrations
 
                     b.HasIndex("ProductRequestId");
 
-                    b.ToTable("ProductRequestItems");
+                    b.ToTable("ProductRequestItems", (string)null);
                 });
 
             modelBuilder.Entity("Api.Models.PurchaseItem", b =>
@@ -701,7 +701,7 @@ namespace Api.Migrations
 
                     b.HasIndex("WarehouseId");
 
-                    b.ToTable("PurchaseItems");
+                    b.ToTable("PurchaseItems", (string)null);
                 });
 
             modelBuilder.Entity("Api.Models.PurchaseOrder", b =>
@@ -777,7 +777,7 @@ namespace Api.Migrations
                     b.HasIndex("OrderNumber")
                         .IsUnique();
 
-                    b.ToTable("PurchaseOrders");
+                    b.ToTable("PurchaseOrders", (string)null);
                 });
 
             modelBuilder.Entity("Api.Models.Role", b =>
@@ -803,7 +803,7 @@ namespace Api.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("Roles");
+                    b.ToTable("Roles", (string)null);
                 });
 
             modelBuilder.Entity("Api.Models.SalesItem", b =>
@@ -854,7 +854,7 @@ namespace Api.Migrations
 
                     b.HasIndex("WarehouseId");
 
-                    b.ToTable("SalesItems");
+                    b.ToTable("SalesItems", (string)null);
                 });
 
             modelBuilder.Entity("Api.Models.SalesOrder", b =>
@@ -937,7 +937,7 @@ namespace Api.Migrations
                     b.HasIndex("OrderNumber")
                         .IsUnique();
 
-                    b.ToTable("SalesOrders");
+                    b.ToTable("SalesOrders", (string)null);
                 });
 
             modelBuilder.Entity("Api.Models.ShoppingCart", b =>
@@ -979,7 +979,7 @@ namespace Api.Migrations
                     b.HasIndex("UserId", "ProductId")
                         .IsUnique();
 
-                    b.ToTable("ShoppingCarts");
+                    b.ToTable("ShoppingCarts", (string)null);
                 });
 
             modelBuilder.Entity("Api.Models.User", b =>
@@ -1021,7 +1021,7 @@ namespace Api.Migrations
                     b.HasIndex("Email")
                         .IsUnique();
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("Api.Models.UserRole", b =>
@@ -1039,7 +1039,7 @@ namespace Api.Migrations
 
                     b.HasIndex("RoleId");
 
-                    b.ToTable("UserRoles");
+                    b.ToTable("UserRoles", (string)null);
                 });
 
             modelBuilder.Entity("Api.Models.Warehouse", b =>
@@ -1087,7 +1087,7 @@ namespace Api.Migrations
 
                     b.HasIndex("ManagerUserId");
 
-                    b.ToTable("Warehouses");
+                    b.ToTable("Warehouses", (string)null);
                 });
 
             modelBuilder.Entity("Api.Models.AuditLog", b =>

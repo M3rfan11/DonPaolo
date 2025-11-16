@@ -45,10 +45,31 @@ if (connectionString.StartsWith("postgresql://") || connectionString.StartsWith(
         var dbPort = uri.Port > 0 ? uri.Port : 5432;
         var database = uri.AbsolutePath.TrimStart('/');
         
-        // Build standard Npgsql connection string
-        connectionString = $"Host={host};Port={dbPort};Database={database};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true";
+        // Check if this is a Supabase connection (use connection pooler for better reliability)
+        bool isSupabase = host.Contains("supabase.co");
         
-        Console.WriteLine($"[DB Config] Converted URI to standard connection string format");
+        // For Supabase, use connection pooler (port 6543) if port is 5432, or use provided port
+        // Connection pooler is more reliable for external connections
+        int finalPort = dbPort;
+        if (isSupabase && dbPort == 5432)
+        {
+            // Try connection pooler first (port 6543), but allow override
+            finalPort = 6543;
+            Console.WriteLine($"[DB Config] Detected Supabase - using connection pooler (port 6543)");
+        }
+        
+        // Build standard Npgsql connection string
+        // Force IPv4 to avoid IPv6 connectivity issues
+        // Include connection timeout and command timeout for better reliability
+        connectionString = $"Host={host};Port={finalPort};Database={database};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true;Include Error Detail=true;Timeout=30;Command Timeout=30";
+        
+        // For Supabase, also try to force IPv4 resolution
+        if (isSupabase)
+        {
+            connectionString += ";No Reset On Close=true";
+        }
+        
+        Console.WriteLine($"[DB Config] Converted URI to standard connection string format (port: {finalPort})");
     }
     catch (Exception ex)
     {

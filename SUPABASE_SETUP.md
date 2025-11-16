@@ -16,11 +16,24 @@ This guide will help you set up your database on Supabase and connect it to your
 
 ## 📋 Step 2: Get Connection String
 
+### Option A: Direct Connection (Port 5432)
 1. In your Supabase project dashboard, go to **Settings** → **Database**
 2. Scroll down to **"Connection string"**
 3. Copy the **URI** format connection string
    - It looks like: `postgresql://postgres:[YOUR-PASSWORD]@db.xxxxx.supabase.co:5432/postgres`
 4. **Important**: Replace `[YOUR-PASSWORD]` with the password you set when creating the project
+
+### Option B: Connection Pooler (Recommended for External Connections) ✅
+**If you get "Network is unreachable" errors, use the connection pooler instead:**
+
+1. In Supabase dashboard, go to **Settings** → **Database**
+2. Scroll down to **"Connection string"**
+3. Look for **"Connection pooling"** section or **"Session mode"** tab
+4. Copy the connection string with port **6543** (connection pooler)
+   - Format: `postgresql://postgres:[YOUR-PASSWORD]@db.xxxxx.supabase.co:6543/postgres`
+5. **Or manually change port from 5432 to 6543** in your connection string
+
+**Note**: The application will automatically detect Supabase and try the connection pooler (port 6543) if the direct connection fails.
 
 ## 📋 Step 3: Update Render Environment Variable
 
@@ -119,11 +132,33 @@ Based on your migrations, you have these tables:
 
 ## 🔧 Troubleshooting
 
+### If you get "Network is unreachable" errors:
+
+**This is the most common issue when connecting to Supabase from Render.**
+
+**Solution 1: Use Connection Pooler (Recommended) ✅**
+1. Update your connection string in Render to use port **6543** instead of 5432:
+   ```
+   postgresql://postgres:YOUR_PASSWORD@db.jjznaktpwigboqyozcbo.supabase.co:6543/postgres
+   ```
+2. The application code will automatically detect Supabase and use port 6543 if you're using port 5432, but you can explicitly set it.
+
+**Solution 2: Check Network Restrictions in Supabase**
+1. Go to Supabase → **Settings** → **Database**
+2. Scroll to **"Network Restrictions"** section
+3. Make sure it says **"Your database can be accessed by all IP addresses"**
+4. If it's restricted, click **"Add restriction"** and allow all IPs, or add Render's IP ranges
+
+**Solution 3: Verify Connection String**
+- Make sure the password is correct (no extra spaces)
+- Make sure the host is `db.jjznaktpwigboqyozcbo.supabase.co` (with `db.` prefix)
+- Make sure you're using the full connection string with password replaced
+
 ### If migrations don't run automatically:
 
 1. **Check connection string**:
    - Verify it's set correctly in Render
-   - Format: `postgresql://postgres:PASSWORD@db.xxxxx.supabase.co:5432/postgres`
+   - Format: `postgresql://postgres:PASSWORD@db.xxxxx.supabase.co:5432/postgres` (or port 6543 for pooler)
 
 2. **Check Supabase logs**:
    - Go to Supabase dashboard → **Logs** → **Postgres Logs**

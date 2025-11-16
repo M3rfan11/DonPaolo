@@ -336,3 +336,5 @@
 /Users/osz/Desktop/gradproject/Api/obj/Debug/net9.0/Api.pdb
 /Users/osz/Desktop/gradproject/Api/obj/Debug/net9.0/Api.genruntimeconfig.cache
 /Users/osz/Desktop/gradproject/Api/obj/Debug/net9.0/ref/Api.dll
+/Users/osz/Desktop/gradproject/Api/bin/Debug/net9.0/Npgsql.dll
+/Users/osz/Desktop/gradproject/Api/bin/Debug/net9.0/Npgsql.EntityFrameworkCore.PostgreSQL.dll
