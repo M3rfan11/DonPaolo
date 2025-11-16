@@ -24,23 +24,6 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-const getMenuItems = (userRoles: string[] = []) => {
-  // SuperAdmin sees dashboard, Cashier sees only POS
-  if (userRoles.includes('SuperAdmin')) {
-    return [
-      { text: 'Dashboard', icon: <Dashboard />, path: '/admin' },
-    ];
-  }
-  
-  if (userRoles.includes('Cashier')) {
-    return [
-      { text: 'POS', icon: <PointOfSale />, path: '/pos' },
-    ];
-  }
-  
-  return [];
-};
-
 interface LayoutProps {
   children: React.ReactNode;
 }

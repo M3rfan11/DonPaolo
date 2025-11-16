@@ -45,51 +45,11 @@ interface SalesReport {
   generatedAt: string;
 }
 
-
-interface QuarterlyPurchaseData {
-  quarter: number;
-  totalPurchases: number;
-  orderCount: number;
-  averageOrderValue: number;
-  topSuppliers: TopSupplierData[];
-  topProducts: TopProductData[];
-  storeBreakdown: StoreBreakdownData[];
-}
-
 interface TopProductData {
   productId: number;
   productName: string;
   totalQuantity: number;
   totalRevenue: number;
-}
-
-interface TopSupplierData {
-  supplierName: string;
-  totalOrders: number;
-  totalAmount: number;
-  averageOrderValue: number;
-}
-
-interface RecentPurchaseOrderData {
-  id: number;
-  orderNumber: string;
-  orderDate: string;
-  supplierName: string;
-  totalAmount: number;
-  status: string;
-}
-
-interface PeakHourData {
-  hour: number;
-  totalSales: number;
-  orderCount: number;
-}
-
-interface HourlySalesData {
-  hour: number;
-  totalSales: number;
-  orderCount: number;
-  averageOrderValue: number;
 }
 
 interface DailySalesData {
