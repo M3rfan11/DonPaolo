@@ -536,28 +536,32 @@ namespace Api.Migrations
                         onDelete: ReferentialAction.SetNull);
                 });
 
-            migrationBuilder.InsertData(
-                table: "Roles",
-                columns: new[] { "Id", "CreatedAt", "Description", "Name" },
-                values: new object[,]
-                {
-                    { 1, new DateTime(2025, 11, 13, 14, 19, 11, 455, DateTimeKind.Utc).AddTicks(620), "System Administrator - Full access to everything", "Admin" },
-                    { 2, new DateTime(2025, 11, 13, 14, 19, 11, 455, DateTimeKind.Utc).AddTicks(5730), "Regular User - Can manage own account and make requests", "User" },
-                    { 3, new DateTime(2025, 11, 13, 14, 19, 11, 455, DateTimeKind.Utc).AddTicks(5770), "Store Manager - Manages assigned store, products, and inventory", "StoreManager" },
-                    { 4, new DateTime(2025, 11, 13, 14, 19, 11, 455, DateTimeKind.Utc).AddTicks(5770), "Warehouse Manager - Manages warehouse operations and stock", "WarehouseManager" },
-                    { 5, new DateTime(2025, 11, 13, 14, 19, 11, 455, DateTimeKind.Utc).AddTicks(5780), "Sales Staff - Handles sales and customer orders", "SalesStaff" },
-                    { 6, new DateTime(2025, 11, 13, 14, 19, 11, 455, DateTimeKind.Utc).AddTicks(5790), "Purchase Staff - Handles purchase orders and supplier management", "PurchaseStaff" }
-                });
+            // NOTE: Data insertion removed - data seeding is now handled by SeedRoles.SeedAsync(), 
+            // SeedUsers.SeedAsync(), and SeedProducts.SeedAsync() in Program.cs to avoid DateTime 
+            // casting issues when migrating from SQLite to PostgreSQL.
+            
+            // migrationBuilder.InsertData(
+            //     table: "Roles",
+            //     columns: new[] { "Id", "CreatedAt", "Description", "Name" },
+            //     values: new object[,]
+            //     {
+            //         { 1, new DateTime(2025, 11, 13, 14, 19, 11, 455, DateTimeKind.Utc).AddTicks(620), "System Administrator - Full access to everything", "Admin" },
+            //         { 2, new DateTime(2025, 11, 13, 14, 19, 11, 455, DateTimeKind.Utc).AddTicks(5730), "Regular User - Can manage own account and make requests", "User" },
+            //         { 3, new DateTime(2025, 11, 13, 14, 19, 11, 455, DateTimeKind.Utc).AddTicks(5770), "Store Manager - Manages assigned store, products, and inventory", "StoreManager" },
+            //         { 4, new DateTime(2025, 11, 13, 14, 19, 11, 455, DateTimeKind.Utc).AddTicks(5770), "Warehouse Manager - Manages warehouse operations and stock", "WarehouseManager" },
+            //         { 5, new DateTime(2025, 11, 13, 14, 19, 11, 455, DateTimeKind.Utc).AddTicks(5780), "Sales Staff - Handles sales and customer orders", "SalesStaff" },
+            //         { 6, new DateTime(2025, 11, 13, 14, 19, 11, 455, DateTimeKind.Utc).AddTicks(5790), "Purchase Staff - Handles purchase orders and supplier management", "PurchaseStaff" }
+            //     });
 
-            migrationBuilder.InsertData(
-                table: "Users",
-                columns: new[] { "Id", "AssignedStoreId", "CreatedAt", "Email", "FullName", "IsActive", "PasswordHash", "UpdatedAt" },
-                values: new object[] { 1, null, new DateTime(2023, 1, 1, 10, 0, 0, 0, DateTimeKind.Utc), "admin@example.com", "System Administrator", true, "$2a$11$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi", null });
+            // migrationBuilder.InsertData(
+            //     table: "Users",
+            //     columns: new[] { "Id", "AssignedStoreId", "CreatedAt", "Email", "FullName", "IsActive", "PasswordHash", "UpdatedAt" },
+            //     values: new object[] { 1, null, new DateTime(2023, 1, 1, 10, 0, 0, 0, DateTimeKind.Utc), "admin@example.com", "System Administrator", true, "$2a$11$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi", null });
 
-            migrationBuilder.InsertData(
-                table: "UserRoles",
-                columns: new[] { "RoleId", "UserId", "AssignedAt" },
-                values: new object[] { 1, 1, new DateTime(2023, 1, 1, 10, 0, 0, 0, DateTimeKind.Utc) });
+            // migrationBuilder.InsertData(
+            //     table: "UserRoles",
+            //     columns: new[] { "RoleId", "UserId", "AssignedAt" },
+            //     values: new object[] { 1, 1, new DateTime(2023, 1, 1, 10, 0, 0, 0, DateTimeKind.Utc) });
 
             migrationBuilder.CreateIndex(
                 name: "IX_AuditLogs_ActorUserId",
