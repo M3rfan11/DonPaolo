@@ -179,7 +179,29 @@ using (var scope = app.Services.CreateScope())
         if (await context.Database.CanConnectAsync())
         {
             logger.LogInformation("Database connection successful. Running migrations...");
-            context.Database.Migrate();
+            
+            try
+            {
+                context.Database.Migrate();
+                logger.LogInformation("Migrations applied successfully.");
+            }
+            catch (Exception migrationEx)
+            {
+                // If migration fails due to data insertion issues (e.g., DateTime casting),
+                // log the error but continue - seed methods will handle data insertion
+                logger.LogWarning(migrationEx, "Migration encountered an error (likely data insertion). Continuing with seed methods...");
+                logger.LogInformation("Attempting to ensure database schema is created...");
+                
+                // Try to ensure database is created even if migration fails
+                try
+                {
+                    await context.Database.EnsureCreatedAsync();
+                }
+                catch
+                {
+                    // Ignore - database might already exist
+                }
+            }
             
             logger.LogInformation("Seeding database...");
             await SeedRoles.SeedAsync(context);

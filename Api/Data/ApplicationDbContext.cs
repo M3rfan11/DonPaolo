@@ -435,36 +435,12 @@ public class ApplicationDbContext : DbContext
 
     private static void SeedData(ModelBuilder modelBuilder)
     {
-        // Seed roles for Food & Beverage Management System
-        modelBuilder.Entity<Role>().HasData(
-            new Role { Id = 1, Name = "Admin", Description = "System Administrator - Full access to everything" },
-            new Role { Id = 2, Name = "User", Description = "Regular User - Can manage own account and make requests" },
-            new Role { Id = 3, Name = "StoreManager", Description = "Store Manager - Manages assigned store, products, and inventory" },
-            new Role { Id = 4, Name = "WarehouseManager", Description = "Warehouse Manager - Manages warehouse operations and stock" },
-            new Role { Id = 5, Name = "SalesStaff", Description = "Sales Staff - Handles sales and customer orders" },
-            new Role { Id = 6, Name = "PurchaseStaff", Description = "Purchase Staff - Handles purchase orders and supplier management" }
-        );
-
-        // Seed admin user (password: Admin123!)
-        modelBuilder.Entity<User>().HasData(
-            new User
-            {
-                Id = 1,
-                FullName = "System Administrator",
-                Email = "admin@example.com",
-                PasswordHash = "$2a$11$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi", // Password: password
-                IsActive = true,
-                CreatedAt = new DateTime(2023, 1, 1, 10, 0, 0, DateTimeKind.Utc)
-            }
-        );
-
-        // Assign admin role to admin user
-        modelBuilder.Entity<UserRole>().HasData(
-            new UserRole { UserId = 1, RoleId = 1, AssignedAt = new DateTime(2023, 1, 1, 10, 0, 0, DateTimeKind.Utc) }
-        );
-
+        // NOTE: Data seeding is now handled by SeedRoles.SeedAsync(), SeedUsers.SeedAsync(), and SeedProducts.SeedAsync()
+        // in Program.cs instead of using HasData() in migrations. This avoids DateTime casting issues
+        // when migrating from SQLite to PostgreSQL and provides better control over data seeding.
+        
         // Categories are seeded via SeedProducts.cs - no hardcoded categories here
-
         // Warehouses are seeded in SeedUsers.cs to avoid duplication
+        // Roles and Users are seeded via SeedRoles.cs and SeedUsers.cs
     }
 }
