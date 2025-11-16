@@ -185,6 +185,18 @@ using (var scope = app.Services.CreateScope())
             
             try
             {
+                // Check pending migrations before running
+                var pendingMigrations = await context.Database.GetPendingMigrationsAsync();
+                var appliedMigrations = await context.Database.GetAppliedMigrationsAsync();
+                
+                logger.LogInformation("Applied migrations: {AppliedCount}", appliedMigrations.Count());
+                logger.LogInformation("Pending migrations: {PendingCount}", pendingMigrations.Count());
+                
+                if (pendingMigrations.Any())
+                {
+                    logger.LogInformation("Pending migrations: {Migrations}", string.Join(", ", pendingMigrations));
+                }
+                
                 context.Database.Migrate();
                 logger.LogInformation("Migrations applied successfully.");
             }
@@ -198,27 +210,51 @@ using (var scope = app.Services.CreateScope())
                 {
                     logger.LogError("Inner exception: {InnerMessage}", migrationEx.InnerException.Message);
                     
-                    // Check for specific PostgreSQL errors
-                    if (migrationEx.InnerException.Message.Contains("null value in column"))
+                    // Check for PostgreSQL-specific errors that indicate migration SQL issues
+                    var innerMessage = migrationEx.InnerException.Message;
+                    if (innerMessage.Contains("syntax error") || innerMessage.Contains("does not exist"))
+                    {
+                        logger.LogError("POSTGRESQL MIGRATION SQL ERROR:");
+                        logger.LogError("The FixPostgreSQLIdentityColumns migration may have SQL syntax issues.");
+                        logger.LogError("This migration should only run on PostgreSQL - check if you're using the correct database.");
+                    }
+                    else if (innerMessage.Contains("null value in column"))
                     {
                         logger.LogError("IDENTITY COLUMN ISSUE DETECTED:");
-                        logger.LogError("The Id columns may not be configured as identity columns.");
-                        logger.LogError("Solution: Ensure the FixPostgreSQLIdentityColumns migration has run.");
+                        logger.LogError("The Id columns are not configured as identity columns.");
+                        logger.LogError("This means the FixPostgreSQLIdentityColumns migration either:");
+                        logger.LogError("  1. Hasn't run yet (check pending migrations)");
+                        logger.LogError("  2. Failed to execute (check migration logs above)");
+                        logger.LogError("  3. The SQL didn't work correctly");
+                        logger.LogError("SOLUTION: Check the migration logs above and ensure sequences are created.");
                     }
                 }
                 
-                // If migration fails due to data insertion issues (e.g., DateTime casting),
-                // log the error but continue - seed methods will handle data insertion
-                logger.LogWarning("Continuing with seed methods despite migration error...");
-                
-                // Try to ensure database is created even if migration fails
-                try
+                // For PostgreSQL, we should NOT continue if migrations fail - the schema is broken
+                // Only continue for SQLite in development
+                var isProduction = app.Environment.IsProduction();
+                if (isProduction)
                 {
-                    await context.Database.EnsureCreatedAsync();
+                    logger.LogError("CRITICAL: Migration failed in production. The application may not work correctly.");
+                    logger.LogError("Please check the migration logs and fix the issue before continuing.");
+                    // Still allow app to start so health checks can work, but log the error
                 }
-                catch (Exception ensureEx)
+                else
                 {
-                    logger.LogWarning(ensureEx, "EnsureCreated also failed - database might already exist");
+                    logger.LogWarning("Continuing with seed methods despite migration error (development mode)...");
+                }
+                
+                // Try to ensure database is created even if migration fails (for development)
+                if (!isProduction)
+                {
+                    try
+                    {
+                        await context.Database.EnsureCreatedAsync();
+                    }
+                    catch (Exception ensureEx)
+                    {
+                        logger.LogWarning(ensureEx, "EnsureCreated also failed - database might already exist");
+                    }
                 }
             }
             
