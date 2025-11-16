@@ -30,40 +30,48 @@ namespace Api
             {
                 new Category
                 {
-                    Name = "Women's Perfumes",
-                    Description = "Elegant and sophisticated women's fragrances",
+                    Name = "Pizza",
+                    Description = "Traditional Italian pizzas",
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 },
                 new Category
                 {
-                    Name = "Men's Fragrances",
-                    Description = "Bold and masculine men's colognes and fragrances",
+                    Name = "Pasta",
+                    Description = "Fresh pasta dishes",
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 },
                 new Category
                 {
-                    Name = "Unisex Scents",
-                    Description = "Versatile fragrances suitable for both men and women",
+                    Name = "Calzone",
+                    Description = "Folded pizza specialties",
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 },
                 new Category
                 {
-                    Name = "Luxury Perfumes",
-                    Description = "Premium and exclusive high-end fragrances",
+                    Name = "Dolci",
+                    Description = "Desserts and sweet treats",
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 },
                 new Category
                 {
-                    Name = "Body Sprays",
-                    Description = "Light and refreshing body sprays and mists",
+                    Name = "Salads",
+                    Description = "Fresh salads",
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new Category
+                {
+                    Name = "Antipasti",
+                    Description = "Appetizers and starters",
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
@@ -82,219 +90,69 @@ namespace Api
                 return; // Skip seeding if products already exist
             }
 
-            var womensCategory = await context.Categories.FirstOrDefaultAsync(c => c.Name == "Women's Perfumes");
-            var mensCategory = await context.Categories.FirstOrDefaultAsync(c => c.Name == "Men's Fragrances");
-            var unisexCategory = await context.Categories.FirstOrDefaultAsync(c => c.Name == "Unisex Scents");
-            var luxuryCategory = await context.Categories.FirstOrDefaultAsync(c => c.Name == "Luxury Perfumes");
-            var bodySprayCategory = await context.Categories.FirstOrDefaultAsync(c => c.Name == "Body Sprays");
+            var pizzaCategory = await context.Categories.FirstOrDefaultAsync(c => c.Name == "Pizza");
+            var pastaCategory = await context.Categories.FirstOrDefaultAsync(c => c.Name == "Pasta");
+            var calzoneCategory = await context.Categories.FirstOrDefaultAsync(c => c.Name == "Calzone");
+            var dolciCategory = await context.Categories.FirstOrDefaultAsync(c => c.Name == "Dolci");
+            var saladsCategory = await context.Categories.FirstOrDefaultAsync(c => c.Name == "Salads");
+            var antipastiCategory = await context.Categories.FirstOrDefaultAsync(c => c.Name == "Antipasti");
 
             var products = new List<Product>
             {
-                // Women's Perfumes
-                new Product
-                {
-                    Name = "Chanel No. 5",
-                    Description = "Classic women's perfume with floral notes of rose, jasmine, and lily of the valley",
-                    Price = 8999.00m,
-                    Unit = "bottle",
-                    SKU = "CHN-001",
-                    Brand = "Chanel",
-                    ImageUrl = "https://images.unsplash.com/photo-1541643600914-78b084683601?w=400&h=400&fit=crop",
-                    CategoryId = womensCategory?.Id ?? 1,
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                },
-                new Product
-                {
-                    Name = "Yves Saint Laurent Libre",
-                    Description = "Modern women's perfume with lavender and orange blossom",
-                    Price = 78.50m,
-                    Unit = "bottle",
-                    SKU = "YSL-002",
-                    Brand = "YSL",
-                    CategoryId = womensCategory?.Id ?? 1,
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                },
-                new Product
-                {
-                    Name = "Marc Jacobs Daisy",
-                    Description = "Light and fresh women's perfume with violet leaves and wild strawberry",
-                    Price = 72.00m,
-                    Unit = "bottle",
-                    SKU = "MJ-003",
-                    Brand = "Marc Jacobs",
-                    CategoryId = womensCategory?.Id ?? 1,
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                },
-                new Product
-                {
-                    Name = "Lancôme La Vie Est Belle",
-                    Description = "Sweet women's perfume with iris and praline notes",
-                    Price = 82.00m,
-                    Unit = "bottle",
-                    SKU = "LAN-004",
-                    Brand = "Lancôme",
-                    CategoryId = womensCategory?.Id ?? 1,
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                },
-                new Product
-                {
-                    Name = "Dolce & Gabbana Light Blue",
-                    Description = "Fresh women's perfume with Sicilian lemon and jasmine",
-                    Price = 88.00m,
-                    Unit = "bottle",
-                    SKU = "DG-005",
-                    Brand = "Dolce & Gabbana",
-                    CategoryId = womensCategory?.Id ?? 1,
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                },
+                // Pizza
+                new Product { Name = "Salmoni", Price = 470m, Unit = "piece", SKU = "PIZ-001", CategoryId = pizzaCategory?.Id ?? 1, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new Product { Name = "Margh", Price = 295m, Unit = "piece", SKU = "PIZ-002", CategoryId = pizzaCategory?.Id ?? 1, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new Product { Name = "Bufala", Price = 390m, Unit = "piece", SKU = "PIZ-003", CategoryId = pizzaCategory?.Id ?? 1, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new Product { Name = "Bersaula", Price = 440m, Unit = "piece", SKU = "PIZ-004", CategoryId = pizzaCategory?.Id ?? 1, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new Product { Name = "Pesto", Price = 350m, Unit = "piece", SKU = "PIZ-005", CategoryId = pizzaCategory?.Id ?? 1, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new Product { Name = "Frutti", Price = 480m, Unit = "piece", SKU = "PIZ-006", CategoryId = pizzaCategory?.Id ?? 1, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new Product { Name = "Ortlana", Price = 245m, Unit = "piece", SKU = "PIZ-007", CategoryId = pizzaCategory?.Id ?? 1, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new Product { Name = "Pepproni", Price = 345m, Unit = "piece", SKU = "PIZ-008", CategoryId = pizzaCategory?.Id ?? 1, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new Product { Name = "Quatro", Price = 390m, Unit = "piece", SKU = "PIZ-009", CategoryId = pizzaCategory?.Id ?? 1, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new Product { Name = "Tartufu", Price = 410m, Unit = "piece", SKU = "PIZ-010", CategoryId = pizzaCategory?.Id ?? 1, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new Product { Name = "Napoli", Price = 430m, Unit = "piece", SKU = "PIZ-011", CategoryId = pizzaCategory?.Id ?? 1, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new Product { Name = "Gambritti", Price = 490m, Unit = "piece", SKU = "PIZ-012", CategoryId = pizzaCategory?.Id ?? 1, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new Product { Name = "Gorgonzola", Price = 375m, Unit = "piece", SKU = "PIZ-013", CategoryId = pizzaCategory?.Id ?? 1, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
 
-                // Men's Fragrances
-                new Product
-                {
-                    Name = "Dior Sauvage",
-                    Description = "Fresh men's fragrance with bergamot, pepper, and ambroxan",
-                    Price = 9500.00m,
-                    Unit = "bottle",
-                    SKU = "DIR-006",
-                    Brand = "Dior",
-                    ImageUrl = "https://images.unsplash.com/photo-1594736797933-d0c29d4a8b5a?w=400&h=400&fit=crop",
-                    CategoryId = mensCategory?.Id ?? 2,
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                },
-                new Product
-                {
-                    Name = "Versace Eros",
-                    Description = "Seductive men's fragrance with mint, green apple, and vanilla",
-                    Price = 65.00m,
-                    Unit = "bottle",
-                    SKU = "VER-007",
-                    Brand = "Versace",
-                    CategoryId = mensCategory?.Id ?? 2,
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                },
-                new Product
-                {
-                    Name = "Giorgio Armani Acqua di Gio",
-                    Description = "Fresh aquatic men's fragrance with marine and citrus notes",
-                    Price = 85.00m,
-                    Unit = "bottle",
-                    SKU = "GA-008",
-                    Brand = "Giorgio Armani",
-                    CategoryId = mensCategory?.Id ?? 2,
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                },
-                new Product
-                {
-                    Name = "Hugo Boss Bottled",
-                    Description = "Sophisticated men's fragrance with apple, cinnamon, and sandalwood",
-                    Price = 68.00m,
-                    Unit = "bottle",
-                    SKU = "HB-009",
-                    Brand = "Hugo Boss",
-                    CategoryId = mensCategory?.Id ?? 2,
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                },
-                new Product
-                {
-                    Name = "Jean Paul Gaultier Le Male",
-                    Description = "Provocative men's fragrance with lavender, vanilla, and tonka bean",
-                    Price = 75.00m,
-                    Unit = "bottle",
-                    SKU = "JPG-010",
-                    Brand = "Jean Paul Gaultier",
-                    CategoryId = mensCategory?.Id ?? 2,
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                },
+                // Pasta
+                new Product { Name = "Salmoni", Price = 490m, Unit = "plate", SKU = "PAS-001", CategoryId = pastaCategory?.Id ?? 2, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new Product { Name = "Arabiata", Price = 295m, Unit = "plate", SKU = "PAS-002", CategoryId = pastaCategory?.Id ?? 2, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new Product { Name = "Gambritti", Price = 490m, Unit = "plate", SKU = "PAS-003", CategoryId = pastaCategory?.Id ?? 2, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new Product { Name = "Allio Olio", Price = 275m, Unit = "plate", SKU = "PAS-004", CategoryId = pastaCategory?.Id ?? 2, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new Product { Name = "Pesto", Price = 390m, Unit = "plate", SKU = "PAS-005", CategoryId = pastaCategory?.Id ?? 2, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new Product { Name = "Frutti", Price = 480m, Unit = "plate", SKU = "PAS-006", CategoryId = pastaCategory?.Id ?? 2, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new Product { Name = "Gnocchi", Price = 325m, Unit = "plate", SKU = "PAS-007", CategoryId = pastaCategory?.Id ?? 2, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new Product { Name = "Pepproni", Price = 360m, Unit = "plate", SKU = "PAS-008", CategoryId = pastaCategory?.Id ?? 2, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new Product { Name = "Quatro", Price = 395m, Unit = "plate", SKU = "PAS-009", CategoryId = pastaCategory?.Id ?? 2, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new Product { Name = "Tartufu", Price = 495m, Unit = "plate", SKU = "PAS-010", CategoryId = pastaCategory?.Id ?? 2, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new Product { Name = "Ravioli", Price = 285m, Unit = "plate", SKU = "PAS-011", CategoryId = pastaCategory?.Id ?? 2, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new Product { Name = "Flitto", Price = 495m, Unit = "plate", SKU = "PAS-012", CategoryId = pastaCategory?.Id ?? 2, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new Product { Name = "Tachhino", Price = 460m, Unit = "plate", SKU = "PAS-013", CategoryId = pastaCategory?.Id ?? 2, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
 
-                // Unisex Scents
-                new Product
-                {
-                    Name = "Tom Ford Black Orchid",
-                    Description = "Luxury unisex fragrance with dark floral notes and chocolate",
-                    Price = 12000.00m,
-                    Unit = "bottle",
-                    SKU = "TF-011",
-                    Brand = "Tom Ford",
-                    ImageUrl = "https://images.unsplash.com/photo-1588405748880-12d1d2a59d75?w=400&h=400&fit=crop",
-                    CategoryId = unisexCategory?.Id ?? 3,
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                },
-                new Product
-                {
-                    Name = "Calvin Klein CK One",
-                    Description = "Iconic unisex fragrance with citrus, green notes, and musk",
-                    Price = 45.00m,
-                    Unit = "bottle",
-                    SKU = "CK-012",
-                    Brand = "Calvin Klein",
-                    CategoryId = unisexCategory?.Id ?? 3,
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                },
+                // Calzone
+                new Product { Name = "Riccotta", Price = 310m, Unit = "piece", SKU = "CAL-001", CategoryId = calzoneCategory?.Id ?? 3, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new Product { Name = "Farcito", Price = 335m, Unit = "piece", SKU = "CAL-002", CategoryId = calzoneCategory?.Id ?? 3, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new Product { Name = "Lecce", Price = 300m, Unit = "piece", SKU = "CAL-003", CategoryId = calzoneCategory?.Id ?? 3, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
 
-                // Luxury Perfumes
-                new Product
-                {
-                    Name = "Viktor & Rolf Flowerbomb",
-                    Description = "Explosive women's perfume with jasmine, rose, and orchid",
-                    Price = 95.00m,
-                    Unit = "bottle",
-                    SKU = "VR-013",
-                    Brand = "Viktor & Rolf",
-                    CategoryId = luxuryCategory?.Id ?? 4,
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                },
-                new Product
-                {
-                    Name = "Paco Rabanne 1 Million",
-                    Description = "Luxury men's fragrance with grapefruit, mint, and rose",
-                    Price = 92.00m,
-                    Unit = "bottle",
-                    SKU = "PR-014",
-                    Brand = "Paco Rabanne",
-                    CategoryId = luxuryCategory?.Id ?? 4,
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                },
-                new Product
-                {
-                    Name = "Burberry Brit",
-                    Description = "Classic British men's fragrance with bergamot, ginger, and cedar",
-                    Price = 58.00m,
-                    Unit = "bottle",
-                    SKU = "BB-015",
-                    Brand = "Burberry",
-                    CategoryId = luxuryCategory?.Id ?? 4,
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                }
+                // Dolci (Desserts)
+                new Product { Name = "Tramisu", Price = 220m, Unit = "piece", SKU = "DOL-001", CategoryId = dolciCategory?.Id ?? 4, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new Product { Name = "Panna Cotta", Price = 210m, Unit = "piece", SKU = "DOL-002", CategoryId = dolciCategory?.Id ?? 4, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new Product { Name = "Nutella", Price = 325m, Unit = "piece", SKU = "DOL-003", CategoryId = dolciCategory?.Id ?? 4, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new Product { Name = "Lotus", Price = 335m, Unit = "piece", SKU = "DOL-004", CategoryId = dolciCategory?.Id ?? 4, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new Product { Name = "Crème burle", Price = 415m, Unit = "piece", SKU = "DOL-005", CategoryId = dolciCategory?.Id ?? 4, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new Product { Name = "Mela Alla Cannella", Price = 360m, Unit = "piece", SKU = "DOL-006", CategoryId = dolciCategory?.Id ?? 4, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+
+                // Salads
+                new Product { Name = "Salmon Salad", Price = 320m, Unit = "plate", SKU = "SAL-001", CategoryId = saladsCategory?.Id ?? 5, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new Product { Name = "Tunu salad", Price = 290m, Unit = "plate", SKU = "SAL-002", CategoryId = saladsCategory?.Id ?? 5, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new Product { Name = "Funghi", Price = 245m, Unit = "plate", SKU = "SAL-003", CategoryId = saladsCategory?.Id ?? 5, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+
+                // Antipasti (Appetizers)
+                new Product { Name = "Crocette", Price = 220m, Unit = "plate", SKU = "ANT-001", CategoryId = antipastiCategory?.Id ?? 6, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new Product { Name = "Parmijana", Price = 210m, Unit = "plate", SKU = "ANT-002", CategoryId = antipastiCategory?.Id ?? 6, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new Product { Name = "Mainara Bruskitta", Price = 165m, Unit = "piece", SKU = "ANT-003", CategoryId = antipastiCategory?.Id ?? 6, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new Product { Name = "Buffala Fretti", Price = 220m, Unit = "plate", SKU = "ANT-004", CategoryId = antipastiCategory?.Id ?? 6, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new Product { Name = "Fries", Price = 175m, Unit = "plate", SKU = "ANT-005", CategoryId = antipastiCategory?.Id ?? 6, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow }
             };
 
             context.Products.AddRange(products);
@@ -303,45 +161,9 @@ namespace Api
 
         private static async Task CreateProductInventoriesAsync(ApplicationDbContext context)
         {
-            // Check if product inventories already exist
-            if (await context.ProductInventories.AnyAsync())
-            {
-                return; // Skip seeding if inventories already exist
-            }
-
-            var products = await context.Products.ToListAsync();
-            var stores = await context.Warehouses.Where(w => w.IsActive).ToListAsync();
-
-            var inventories = new List<ProductInventory>();
-
-            foreach (var store in stores)
-            {
-                foreach (var product in products)
-                {
-                    // Create inventory for each perfume in each store
-                    var random = new Random();
-                    var storeQuantity = random.Next(15, 35); // Store inventory: 15-35 bottles
-                    var posQuantity = random.Next(3, 12);    // POS inventory: 3-12 bottles
-                    
-                    var inventory = new ProductInventory
-                    {
-                        ProductId = product.Id,
-                        WarehouseId = store.Id,
-                        Quantity = storeQuantity,
-                        POSQuantity = posQuantity,
-                        Unit = product.Unit,
-                        MinimumStockLevel = 2,  // Minimum 2 bottles before requesting more
-                        MaximumStockLevel = 50, // Maximum 50 bottles storage capacity
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow
-                    };
-
-                    inventories.Add(inventory);
-                }
-            }
-
-            context.ProductInventories.AddRange(inventories);
-            await context.SaveChangesAsync();
+            // Skip inventory creation - inventory not used in simplified system
+            // This method is kept for compatibility but does nothing
+            await Task.CompletedTask;
         }
     }
 }

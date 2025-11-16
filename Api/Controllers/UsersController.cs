@@ -235,26 +235,42 @@ public class UsersController : ControllerBase
             });
 
             // Update fields if provided
-            if (!string.IsNullOrEmpty(request.FullName))
-                user.FullName = request.FullName;
+            bool hasChanges = false;
             
-            if (!string.IsNullOrEmpty(request.Email))
+            if (!string.IsNullOrEmpty(request.FullName) && user.FullName != request.FullName)
+            {
+                user.FullName = request.FullName;
+                hasChanges = true;
+            }
+            
+            if (!string.IsNullOrEmpty(request.Email) && user.Email != request.Email)
             {
                 if (await _context.Users.AnyAsync(u => u.Email == request.Email && u.Id != id))
                 {
                     return Conflict(new { message = "Email already exists" });
                 }
                 user.Email = request.Email;
+                hasChanges = true;
             }
             
             if (!string.IsNullOrEmpty(request.Password))
+            {
                 user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
+                hasChanges = true;
+            }
             
-            if (request.IsActive.HasValue)
+            if (request.IsActive.HasValue && user.IsActive != request.IsActive.Value)
+            {
                 user.IsActive = request.IsActive.Value;
+                hasChanges = true;
+            }
 
-            user.UpdatedAt = DateTime.UtcNow;
+            if (hasChanges)
+            {
+                user.UpdatedAt = DateTime.UtcNow;
+            }
 
+            // Save changes - EF Core will automatically detect changes to tracked entities
             await _context.SaveChangesAsync();
 
             var after = System.Text.Json.JsonSerializer.Serialize(new UserResponse

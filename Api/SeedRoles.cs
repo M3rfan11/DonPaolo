@@ -14,13 +14,11 @@ namespace Api
                 return; // Roles already seeded
             }
 
-            // Create roles
+            // Create roles - Only SuperAdmin and Cashier
             var roles = new List<Role>
             {
                 new Role { Name = "SuperAdmin", Description = "Super Administrator with full system access" },
-                new Role { Name = "StoreManager", Description = "Store Manager with store-specific access" },
-                new Role { Name = "Cashier", Description = "Cashier with POS access for local sales" },
-                new Role { Name = "Customer", Description = "Customer role for online ordering and order tracking" }
+                new Role { Name = "Cashier", Description = "Cashier with POS access for local sales" }
             };
 
             context.Roles.AddRange(roles);

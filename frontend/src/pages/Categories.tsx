@@ -60,7 +60,8 @@ const Categories: React.FC = () => {
   const loadCategories = async () => {
     try {
       setLoading(true);
-      const categoriesData = await api.getCategories();
+      // Use getAllCategories to include inactive categories so they can be reactivated
+      const categoriesData = await api.getAllCategories();
       setCategories(categoriesData);
     } catch (err: any) {
       setError('Failed to load categories');
@@ -218,67 +219,94 @@ const Categories: React.FC = () => {
       )}
 
       {/* Categories Overview Cards */}
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 3 }}>
-        <Card sx={{ minWidth: 200 }}>
+      <Box sx={{ 
+        display: 'grid',
+        gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' },
+        gap: 2,
+        mb: 3 
+      }}>
+        <Card>
           <CardContent>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <Box>
                 <Typography color="textSecondary" gutterBottom>
                   Total Categories
                 </Typography>
-                <Typography variant="h5" component="div" color="primary.main">
+                <Typography variant="h5" component="div" sx={{ color: '#000000', fontWeight: 'bold' }}>
                   {categories.length}
                 </Typography>
               </Box>
-              <Category sx={{ color: 'primary.main', fontSize: 40 }} />
+              <Category sx={{ color: '#000000', fontSize: { xs: 32, sm: 40 } }} />
             </Box>
           </CardContent>
         </Card>
         
-        <Card sx={{ minWidth: 200 }}>
+        <Card>
           <CardContent>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <Box>
                 <Typography color="textSecondary" gutterBottom>
                   Active Categories
                 </Typography>
-                <Typography variant="h5" component="div" color="success.main">
+                <Typography variant="h5" component="div" sx={{ color: '#000000', fontWeight: 'bold' }}>
                   {categories.filter(c => c.isActive).length}
                 </Typography>
               </Box>
-              <CategoryOutlined sx={{ color: 'success.main', fontSize: 40 }} />
+              <CategoryOutlined sx={{ color: '#000000', fontSize: { xs: 32, sm: 40 } }} />
             </Box>
           </CardContent>
         </Card>
 
-        <Card sx={{ minWidth: 200 }}>
+        <Card>
           <CardContent>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <Box>
                 <Typography color="textSecondary" gutterBottom>
                   Total Products
                 </Typography>
-                <Typography variant="h5" component="div" color="info.main">
+                <Typography variant="h5" component="div" sx={{ color: '#000000', fontWeight: 'bold' }}>
                   {categories.reduce((sum, c) => sum + c.productCount, 0)}
                 </Typography>
               </Box>
-              <Category sx={{ color: 'info.main', fontSize: 40 }} />
+              <Category sx={{ color: '#000000', fontSize: { xs: 32, sm: 40 } }} />
             </Box>
           </CardContent>
         </Card>
       </Box>
 
-      <Box sx={{ height: 400, width: '100%' }}>
+      <Box sx={{ 
+        height: { xs: 400, sm: 500, md: 600 },
+        width: '100%',
+        '& .MuiDataGrid-root': {
+          fontSize: { xs: '0.75rem', sm: '0.875rem' }
+        }
+      }}>
         <DataGrid
           rows={categories}
           columns={columns}
           pageSizeOptions={[10, 25, 50]}
           disableRowSelectionOnClick
+          sx={{
+            '& .MuiDataGrid-cell': {
+              fontSize: { xs: '0.75rem', sm: '0.875rem' }
+            }
+          }}
         />
       </Box>
 
       {/* Create/Edit Dialog */}
-      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
+      <Dialog 
+        open={openDialog} 
+        onClose={handleCloseDialog} 
+        maxWidth="sm" 
+        fullWidth
+        sx={{
+          '& .MuiDialog-paper': {
+            m: { xs: 1, sm: 2 },
+            width: { xs: 'calc(100% - 16px)', sm: 'auto' }
+          }
+        }}
+      >
         <DialogTitle>
           {editingCategory ? 'Edit Category' : 'Add New Category'}
         </DialogTitle>

@@ -158,6 +158,11 @@ class ApiService {
     return response.data;
   }
 
+  async getAllCategories() {
+    const response = await this.api.get('/api/Category/all');
+    return response.data;
+  }
+
   async getCategoryById(id: number) {
     const response = await this.api.get(`/api/Category/${id}`);
     return response.data;
@@ -781,6 +786,11 @@ class ApiService {
     return response.data;
   }
 
+  async openCashDrawer() {
+    const response = await this.api.post('/api/POS/open-drawer');
+    return response.data;
+  }
+
   // ==================== ADMIN STORE ANALYTICS ====================
   async getStoreSales(storeId: number, fromDate?: string, toDate?: string) {
     const params = new URLSearchParams();
@@ -910,11 +920,10 @@ class ApiService {
   }
 
   // ==================== REPORTS ====================
-  async getSalesReport(year?: number, quarter?: number, storeId?: number) {
+  async getSalesReport(fromDate?: Date, toDate?: Date) {
     const params = new URLSearchParams();
-    if (year) params.append('year', year.toString());
-    if (quarter) params.append('quarter', quarter.toString());
-    if (storeId) params.append('storeId', storeId.toString());
+    if (fromDate) params.append('fromDate', fromDate.toISOString());
+    if (toDate) params.append('toDate', toDate.toISOString());
     
     const response = await this.api.get(`/api/Reports/sales?${params.toString()}`);
     return response.data;

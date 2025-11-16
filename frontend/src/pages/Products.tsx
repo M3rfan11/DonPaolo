@@ -237,7 +237,13 @@ const Products: React.FC = () => {
         </Alert>
       )}
 
-      <Box sx={{ height: 400, width: '100%' }}>
+      <Box sx={{ 
+        height: { xs: 400, sm: 500, md: 600 },
+        width: '100%',
+        '& .MuiDataGrid-root': {
+          fontSize: { xs: '0.75rem', sm: '0.875rem' }
+        }
+      }}>
         <DataGrid
           rows={products}
           columns={columns}
@@ -248,10 +254,26 @@ const Products: React.FC = () => {
           }}
           pageSizeOptions={[10, 25, 50]}
           disableRowSelectionOnClick
+          sx={{
+            '& .MuiDataGrid-cell': {
+              fontSize: { xs: '0.75rem', sm: '0.875rem' }
+            }
+          }}
         />
       </Box>
 
-      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
+      <Dialog 
+        open={openDialog} 
+        onClose={handleCloseDialog} 
+        maxWidth="sm" 
+        fullWidth
+        sx={{
+          '& .MuiDialog-paper': {
+            m: { xs: 1, sm: 2 },
+            width: { xs: 'calc(100% - 16px)', sm: 'auto' }
+          }
+        }}
+      >
         <DialogTitle>
           {editingProduct ? (isAdmin ? 'Edit Product' : 'View Product') : 'Add Product'}
         </DialogTitle>

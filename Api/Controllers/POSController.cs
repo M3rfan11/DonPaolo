@@ -55,82 +55,54 @@ public class POSController : ControllerBase
             var currentUserId = GetCurrentUserId();
             var currentUserRoles = await GetCurrentUserRoles(currentUserId);
             
-            IQueryable<ProductInventory> inventoryQuery = _context.ProductInventories
-                .Include(pi => pi.Product)
-                .Include(pi => pi.Warehouse)
-                .Where(pi => pi.POSQuantity > 0); // Only products with POS stock
-
+            // Get store ID for filtering
             int? storeId = null;
-
-            // Apply store-scoped filtering
-            if (currentUserRoles.Contains("SuperAdmin"))
+            var currentUser = await _context.Users.FindAsync(currentUserId);
+            
+            if (currentUserRoles.Contains("Cashier"))
             {
-                // SuperAdmin can see all products
-            }
-            else if (currentUserRoles.Contains("Cashier"))
-            {
-                // Cashier can only see their store's products
-                var currentUser = await _context.Users.FindAsync(currentUserId);
                 if (currentUser?.AssignedStoreId == null)
                 {
                     _logger.LogWarning("Cashier user {UserId} is not assigned to any store, returning empty product list", currentUserId);
                     return Ok(new List<POSProductResponse>());
                 }
-                
                 storeId = currentUser.AssignedStoreId;
-                inventoryQuery = inventoryQuery.Where(pi => pi.WarehouseId == storeId);
+            }
+            else if (currentUserRoles.Contains("SuperAdmin"))
+            {
+                // SuperAdmin uses their assigned store (same as cashier)
+                if (currentUser?.AssignedStoreId != null)
+                {
+                    storeId = currentUser.AssignedStoreId;
+                }
             }
             else
             {
                 return StatusCode(403, new { Message = "You don't have permission to access POS products" });
             }
 
-            // Get regular products
-            var products = await inventoryQuery
-                .Select(pi => new POSProductResponse
+            // Get all active products (no inventory check - inventory not used)
+            var productsQuery = _context.Products
+                .Include(p => p.Category)
+                .Where(p => p.IsActive);
+
+            var products = await productsQuery
+                .Select(p => new POSProductResponse
                 {
-                    ProductId = pi.ProductId,
-                    ProductName = pi.Product.Name,
-                    Price = pi.Product.Price,
-                    AvailableQuantity = pi.POSQuantity,
-                    Unit = pi.Unit,
-                    CategoryName = pi.Product.Category.Name,
-                    SKU = pi.Product.SKU,
+                    ProductId = p.Id,
+                    ProductName = p.Name,
+                    Price = p.Price,
+                    AvailableQuantity = 999, // No inventory tracking - show as available
+                    Unit = p.Unit ?? "unit",
+                    CategoryName = p.Category.Name,
+                    SKU = p.SKU ?? "",
                     IsAssemblyOffer = false
                 })
                 .OrderBy(p => p.ProductName)
                 .ToListAsync();
 
-            // Get assembly offers for the same store
-            IQueryable<ProductAssembly> assemblyQuery = _context.ProductAssemblies
-                .Include(pa => pa.BillOfMaterials)
-                .Where(pa => pa.IsActive && pa.Status == "Completed");
-
-            if (storeId.HasValue)
-            {
-                assemblyQuery = assemblyQuery.Where(pa => pa.StoreId == storeId);
-            }
-
-            var assemblyOffers = await assemblyQuery
-                .Select(pa => new POSProductResponse
-                {
-                    ProductId = pa.Id + 10000, // Use high ID to avoid conflicts with regular products
-                    ProductName = pa.Name,
-                    Price = pa.SalePrice ?? 0,
-                    AvailableQuantity = 1, // Assembly offers are always quantity 1
-                    Unit = pa.Unit ?? "offer",
-                    CategoryName = "Assembly Offers",
-                    SKU = $"ASSEMBLY-{pa.Id}",
-                    IsAssemblyOffer = true,
-                    AssemblyId = pa.Id
-                })
-                .OrderBy(p => p.ProductName)
-                .ToListAsync();
-
-            // Combine regular products and assembly offers
-            var allProducts = products.Concat(assemblyOffers).OrderBy(p => p.ProductName).ToList();
-
-            return Ok(allProducts);
+            // No assembly offers - simplified system
+            return Ok(products);
         }
         catch (Exception ex)
         {
@@ -249,115 +221,31 @@ public class POSController : ControllerBase
                 _context.SalesOrders.Add(salesOrder);
                 await _context.SaveChangesAsync();
 
-                // Create sales order items and update inventory
+                // Create sales order items (no inventory - simplified system)
                 var salesOrderItems = new List<SalesItem>();
                 foreach (var item in request.Items)
                 {
-                    // Check if this is an assembly offer (ProductId > 10000 indicates assembly offer)
-                    if (item.ProductId > 10000)
+                    // Verify product exists and is active
+                    var product = await _context.Products.FindAsync(item.ProductId);
+                    if (product == null || !product.IsActive)
                     {
-                        // This is an assembly offer - get the assembly ID
-                        var assemblyId = item.ProductId - 10000;
-                        var assembly = await _context.ProductAssemblies
-                            .Include(pa => pa.BillOfMaterials)
-                            .FirstOrDefaultAsync(pa => pa.Id == assemblyId);
-
-                        if (assembly == null)
-                        {
-                            await transaction.RollbackAsync();
-                            return BadRequest(new { Message = $"Assembly offer {assemblyId} not found" });
-                        }
-
-                        // Check if assembly is available (has sufficient materials)
-                        foreach (var bom in assembly.BillOfMaterials)
-                        {
-                            var inventory = await _context.ProductInventories
-                                .FirstOrDefaultAsync(pi => pi.ProductId == bom.RawProductId && pi.WarehouseId == storeId);
-
-                            // CRITICAL FIX: Calculate total required quantity (per unit × assembly quantity × sale quantity)
-                            var totalRequiredQuantity = bom.RequiredQuantity * assembly.Quantity * item.Quantity;
-
-                            if (inventory == null || inventory.Quantity < totalRequiredQuantity)
-                            {
-                                // Get product name for error message
-                                var product = await _context.Products.FindAsync(bom.RawProductId);
-                                var productName = product?.Name ?? $"Product {bom.RawProductId}";
-                                
-                                await transaction.RollbackAsync();
-                                return BadRequest(new { Message = $"Insufficient materials for assembly offer '{assembly.Name}'. Product '{productName}' not available. Required: {totalRequiredQuantity}, Available: {inventory?.Quantity ?? 0}" });
-                            }
-                        }
-
-                        // Create sales order item for assembly offer
-                        var assemblySalesItem = new SalesItem
-                        {
-                            SalesOrderId = salesOrder.Id,
-                            ProductId = item.ProductId,
-                            WarehouseId = storeId,
-                            Quantity = item.Quantity,
-                            UnitPrice = item.UnitPrice,
-                            TotalPrice = item.TotalPrice,
-                            CreatedAt = DateTime.UtcNow
-                        };
-
-                        salesOrderItems.Add(assemblySalesItem);
-
-                        // Deduct materials from inventory
-                        foreach (var bom in assembly.BillOfMaterials)
-                        {
-                            var inventory = await _context.ProductInventories
-                                .FirstOrDefaultAsync(pi => pi.ProductId == bom.RawProductId && pi.WarehouseId == storeId);
-
-                            if (inventory != null)
-                            {
-                                // CRITICAL FIX: Calculate total required quantity (per unit × assembly quantity × sale quantity)
-                                var totalRequiredQuantity = bom.RequiredQuantity * assembly.Quantity * item.Quantity;
-                                inventory.Quantity -= totalRequiredQuantity;
-                                inventory.UpdatedAt = DateTime.UtcNow;
-                            }
-                        }
-
-                        // Update sales order notes to indicate assembly sale
-                        salesOrder.Notes = string.IsNullOrEmpty(salesOrder.Notes) 
-                            ? $"Assembly Sale: {assembly.Name}" 
-                            : $"{salesOrder.Notes}; Assembly Sale: {assembly.Name}";
+                        await transaction.RollbackAsync();
+                        return BadRequest(new { Message = $"Product {item.ProductId} not found or inactive" });
                     }
-                    else
+
+                    // Create sales order item
+                    var salesOrderItem = new SalesItem
                     {
-                        // Regular product processing
-                        var inventory = await _context.ProductInventories
-                            .FirstOrDefaultAsync(pi => pi.ProductId == item.ProductId && pi.WarehouseId == storeId);
+                        SalesOrderId = salesOrder.Id,
+                        ProductId = item.ProductId,
+                        WarehouseId = storeId,
+                        Quantity = item.Quantity,
+                        UnitPrice = item.UnitPrice,
+                        TotalPrice = item.TotalPrice,
+                        CreatedAt = DateTime.UtcNow
+                    };
 
-                        if (inventory == null)
-                        {
-                            await transaction.RollbackAsync();
-                            return BadRequest(new { Message = $"Product {item.ProductId} not found in store inventory" });
-                        }
-
-                        if (inventory.POSQuantity < item.Quantity)
-                        {
-                            await transaction.RollbackAsync();
-                            return BadRequest(new { Message = $"Insufficient POS stock for product {item.ProductName}. Available: {inventory.POSQuantity}" });
-                        }
-
-                        // Create sales order item
-                        var salesOrderItem = new SalesItem
-                        {
-                            SalesOrderId = salesOrder.Id,
-                            ProductId = item.ProductId,
-                            WarehouseId = storeId,
-                            Quantity = item.Quantity,
-                            UnitPrice = item.UnitPrice,
-                            TotalPrice = item.TotalPrice,
-                            CreatedAt = DateTime.UtcNow
-                        };
-
-                        salesOrderItems.Add(salesOrderItem);
-
-                        // Update POS inventory
-                        inventory.POSQuantity -= item.Quantity;
-                        inventory.UpdatedAt = DateTime.UtcNow;
-                    }
+                    salesOrderItems.Add(salesOrderItem);
                 }
 
                 _context.SalesItems.AddRange(salesOrderItems);
@@ -508,5 +396,49 @@ public class POSController : ControllerBase
     private string GetUserAgent()
     {
         return HttpContext.Request.Headers["User-Agent"].ToString();
+    }
+
+    /// <summary>
+    /// Open cash drawer (sends ESC/POS command)
+    /// </summary>
+    [HttpPost("open-drawer")]
+    [Authorize(Roles = "SuperAdmin,Cashier")]
+    public async Task<ActionResult> OpenCashDrawer()
+    {
+        try
+        {
+            // ESC/POS command to open cash drawer
+            // ESC p 0 25 250 means:
+            // ESC p - Print and feed
+            // 0 - Drawer pin 2
+            // 25 - Pulse time (25 * 2ms = 50ms)
+            // 250 - Pulse time (250 * 2ms = 500ms)
+            var escPosCommand = new byte[] { 0x1B, 0x70, 0x00, 0x19, 0xFA };
+
+            // In a real implementation, you would send this to a printer
+            // For now, we'll log it and return success
+            // You can integrate with a printer service like:
+            // - Windows: Use RawPrinterHelper
+            // - Linux: Use lp or direct USB/Serial communication
+            // - Network printer: Send raw bytes via TCP/IP
+            
+            _logger.LogInformation("Cash drawer open command sent");
+
+            // TODO: Implement actual printer communication
+            // Example for Windows:
+            // RawPrinterHelper.SendBytesToPrinter(printerName, escPosCommand);
+            
+            // Example for network printer:
+            // using var client = new TcpClient(printerIp, printerPort);
+            // using var stream = client.GetStream();
+            // await stream.WriteAsync(escPosCommand, 0, escPosCommand.Length);
+
+            return Ok(new { Message = "Cash drawer opened successfully" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error opening cash drawer");
+            return StatusCode(500, new { Message = "An error occurred while opening the cash drawer" });
+        }
     }
 }

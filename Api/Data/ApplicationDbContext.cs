@@ -463,14 +463,7 @@ public class ApplicationDbContext : DbContext
             new UserRole { UserId = 1, RoleId = 1, AssignedAt = new DateTime(2023, 1, 1, 10, 0, 0, DateTimeKind.Utc) }
         );
 
-        // Seed initial categories for Food & Beverage Management System
-        modelBuilder.Entity<Category>().HasData(
-            new Category { Id = 1, Name = "Beverages", Description = "All types of drinks including soft drinks, juices", IsActive = true, CreatedAt = new DateTime(2023, 1, 1, 10, 0, 0, DateTimeKind.Utc) },
-            new Category { Id = 2, Name = "Food Items", Description = "Ready-to-eat food items and snacks", IsActive = true, CreatedAt = new DateTime(2023, 1, 1, 10, 0, 0, DateTimeKind.Utc) },
-            new Category { Id = 3, Name = "Raw Materials", Description = "Ingredients and raw materials for food preparation", IsActive = true, CreatedAt = new DateTime(2023, 1, 1, 10, 0, 0, DateTimeKind.Utc) },
-            new Category { Id = 4, Name = "Packaging", Description = "Packaging materials and containers", IsActive = true, CreatedAt = new DateTime(2023, 1, 1, 10, 0, 0, DateTimeKind.Utc) },
-            new Category { Id = 5, Name = "Cleaning Supplies", Description = "Cleaning and sanitization supplies", IsActive = true, CreatedAt = new DateTime(2023, 1, 1, 10, 0, 0, DateTimeKind.Utc) }
-        );
+        // Categories are seeded via SeedProducts.cs - no hardcoded categories here
 
         // Warehouses are seeded in SeedUsers.cs to avoid duplication
     }

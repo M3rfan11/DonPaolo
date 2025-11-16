@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useMediaQuery, useTheme } from '@mui/material';
 import {
   Box,
   Card,
@@ -92,6 +93,8 @@ interface SaleResponse {
 }
 
 const POS: React.FC = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [products, setProducts] = useState<POSProduct[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -189,7 +192,7 @@ const POS: React.FC = () => {
     const matchesSearch = product.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          product.barcode?.includes(searchTerm);
     const matchesCategory = !selectedCategory || product.categoryName === selectedCategory;
-    return matchesSearch && matchesCategory && product.availableQuantity > 0;
+    return matchesSearch && matchesCategory;
   });
 
   const categories = Array.from(new Set(products.map(p => p.categoryName)));
@@ -198,10 +201,7 @@ const POS: React.FC = () => {
     const existingItem = cart.find(item => item.productId === product.productId);
     
     if (existingItem) {
-      if (existingItem.quantity >= product.availableQuantity) {
-        showSnackbar('Cannot add more items - insufficient stock', 'error');
-        return;
-      }
+      // No stock check - inventory not used
       updateCartItem(product.productId, existingItem.quantity + 1);
     } else {
       const newItem: CartItem = {
@@ -222,10 +222,7 @@ const POS: React.FC = () => {
     }
 
     const product = products.find(p => p.productId === productId);
-    if (product && newQuantity > product.availableQuantity) {
-      showSnackbar('Cannot add more items - insufficient stock', 'error');
-      return;
-    }
+    // No stock check - inventory not used
 
     setCart(cart.map(item =>
       item.productId === productId
@@ -298,100 +295,362 @@ const POS: React.FC = () => {
     }
   };
 
-  const printReceipt = () => {
-    if (currentSale) {
-      const printWindow = window.open('', '_blank');
-      const receiptContent = `
-        <html>
-          <head>
-            <title>Receipt - ${currentSale.saleNumber}</title>
-            <style>
-              body { font-family: Arial, sans-serif; margin: 20px; }
-              .header { text-align: center; margin-bottom: 20px; }
-              .store-name { font-size: 24px; font-weight: bold; }
-              .sale-info { margin-bottom: 20px; }
-              .items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-              .items-table th, .items-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-              .totals { margin-top: 20px; }
-              .total-line { display: flex; justify-content: space-between; margin: 5px 0; }
-              .final-total { font-weight: bold; font-size: 18px; border-top: 2px solid #000; padding-top: 10px; }
-            </style>
-          </head>
-          <body>
-            <div class="header">
-              <div class="store-name">${currentSale.storeName}</div>
-              <div>Receipt: ${currentSale.saleNumber}</div>
-              <div>Date: ${new Date(currentSale.saleDate).toLocaleString()}</div>
-            </div>
-            
-            <div class="sale-info">
-              <div>Customer: ${currentSale.customerName}</div>
-              <div>Cashier: ${currentSale.cashierName}</div>
-              <div>Payment: ${currentSale.paymentMethod}</div>
-            </div>
-            
-            <table class="items-table">
-              <thead>
-                <tr>
-                  <th>Item</th>
-                  <th>Qty</th>
-                  <th>Price</th>
-                  <th>Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${currentSale.items.map(item => `
-                  <tr>
-                    <td>${item.productName}</td>
-                    <td>${item.quantity}</td>
-                    <td>$${item.unitPrice.toFixed(2)}</td>
-                    <td>$${item.totalPrice.toFixed(2)}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-            
-            <div class="totals">
-              <div class="total-line">
-                <span>Subtotal:</span>
-                <span>$${currentSale.totalAmount.toFixed(2)}</span>
+  const previewReceipts = () => {
+    if (!currentSale) return;
+    printReceipt(false, false); // Preview mode - no drawer, no auto-print
+  };
+
+  const printReceipt = async (openDrawer: boolean = true, autoPrint: boolean = true) => {
+    if (!currentSale) return;
+
+    if (openDrawer) {
+      try {
+        // Open cash drawer when printing invoice
+        await api.openCashDrawer();
+      } catch (error) {
+        console.error('Error opening cash drawer:', error);
+        // Continue with printing even if drawer fails
+      }
+    }
+
+    // Print Customer Invoice (with prices)
+    const invoiceWindow = window.open('', '_blank');
+    const invoiceContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Invoice - ${currentSale.saleNumber}</title>
+          <style>
+            @media print {
+              @page { size: 80mm auto; margin: 0; }
+              body { margin: 5mm; }
+            }
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { 
+              font-family: 'Courier New', monospace;
+              font-size: 12px;
+              width: 80mm;
+              margin: 0 auto;
+              padding: 10px;
+              background: white;
+            }
+            .header { 
+              text-align: center; 
+              border-bottom: 2px dashed #000;
+              padding-bottom: 10px;
+              margin-bottom: 10px;
+            }
+            .store-name { 
+              font-size: 18px; 
+              font-weight: bold;
+              text-transform: uppercase;
+              margin-bottom: 5px;
+            }
+            .store-address {
+              font-size: 10px;
+              margin-bottom: 5px;
+            }
+            .receipt-info { 
+              text-align: center;
+              font-size: 10px;
+              margin: 10px 0;
+            }
+            .divider {
+              border-top: 1px dashed #000;
+              margin: 10px 0;
+            }
+            .items-section {
+              margin: 10px 0;
+            }
+            .item-row {
+              display: flex;
+              justify-content: space-between;
+              margin-bottom: 5px;
+              font-size: 11px;
+            }
+            .item-name {
+              flex: 1;
+              font-weight: bold;
+            }
+            .item-details {
+              text-align: right;
+              margin-left: 10px;
+            }
+            .item-quantity {
+              display: inline-block;
+              min-width: 30px;
+            }
+            .item-price {
+              display: inline-block;
+              min-width: 50px;
+              text-align: right;
+            }
+            .totals { 
+              margin-top: 15px;
+              border-top: 1px dashed #000;
+              padding-top: 10px;
+            }
+            .total-line { 
+              display: flex; 
+              justify-content: space-between; 
+              margin: 5px 0;
+              font-size: 11px;
+            }
+            .final-total { 
+              font-weight: bold; 
+              font-size: 14px;
+              border-top: 2px solid #000;
+              padding-top: 5px;
+              margin-top: 5px;
+            }
+            .footer {
+              text-align: center;
+              margin-top: 20px;
+              padding-top: 10px;
+              border-top: 1px dashed #000;
+              font-size: 10px;
+            }
+            .payment-info {
+              margin: 10px 0;
+              font-size: 11px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="store-name">DON PAOLO</div>
+            <div class="store-address">${currentSale.storeName}</div>
+            <div class="store-address">Restaurant & Bar</div>
+          </div>
+          
+          <div class="receipt-info">
+            <div>Receipt #: ${currentSale.saleNumber}</div>
+            <div>Date: ${new Date(currentSale.saleDate).toLocaleString('en-US', { 
+              year: 'numeric', 
+              month: '2-digit', 
+              day: '2-digit', 
+              hour: '2-digit', 
+              minute: '2-digit' 
+            })}</div>
+          </div>
+          
+          <div class="divider"></div>
+          
+          <div class="payment-info">
+            <div>Customer: ${currentSale.customerName}</div>
+            <div>Cashier: ${currentSale.cashierName}</div>
+            <div>Payment: ${currentSale.paymentMethod}</div>
+          </div>
+          
+          <div class="divider"></div>
+          
+          <div class="items-section">
+            ${currentSale.items.map(item => `
+              <div class="item-row">
+                <div class="item-name">${item.productName}</div>
+                <div class="item-details">
+                  <span class="item-quantity">${item.quantity}x</span>
+                  <span class="item-price">$${item.unitPrice.toFixed(2)}</span>
+                </div>
               </div>
+              <div class="item-row" style="justify-content: flex-end; font-size: 10px;">
+                <span>$${item.totalPrice.toFixed(2)}</span>
+              </div>
+            `).join('')}
+          </div>
+          
+          <div class="divider"></div>
+          
+          <div class="totals">
+            <div class="total-line">
+              <span>Subtotal:</span>
+              <span>$${currentSale.totalAmount.toFixed(2)}</span>
+            </div>
+            ${currentSale.discountAmount > 0 ? `
               <div class="total-line">
                 <span>Discount:</span>
                 <span>-$${currentSale.discountAmount.toFixed(2)}</span>
               </div>
+            ` : ''}
+            ${currentSale.taxAmount > 0 ? `
               <div class="total-line">
                 <span>Tax:</span>
                 <span>$${currentSale.taxAmount.toFixed(2)}</span>
               </div>
-              <div class="total-line final-total">
-                <span>Total:</span>
-                <span>$${currentSale.finalAmount.toFixed(2)}</span>
-              </div>
+            ` : ''}
+            <div class="total-line final-total">
+              <span>TOTAL:</span>
+              <span>$${currentSale.finalAmount.toFixed(2)}</span>
+            </div>
+          </div>
+          
+          <div class="footer">
+            <div>Thank you for dining with us!</div>
+            <div style="margin-top: 5px;">We hope to see you again soon</div>
+          </div>
+        </body>
+      </html>
+    `;
+    
+    if (invoiceWindow) {
+      invoiceWindow.document.write(invoiceContent);
+      invoiceWindow.document.close();
+      invoiceWindow.focus(); // Bring to front
+      
+      // Wait a bit then print (if auto-print is enabled)
+      if (autoPrint) {
+        setTimeout(() => {
+          invoiceWindow.print();
+        }, 250);
+      }
+    }
+
+    // Print Kitchen Ticket (without prices) - separate window (open immediately)
+    const kitchenWindow = window.open('', '_blank');
+    const kitchenContent = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Kitchen Ticket - ${currentSale.saleNumber}</title>
+            <style>
+              @media print {
+                @page { size: 80mm auto; margin: 0; }
+                body { margin: 5mm; }
+              }
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body { 
+                font-family: 'Courier New', monospace;
+                font-size: 14px;
+                width: 80mm;
+                margin: 0 auto;
+                padding: 10px;
+                background: white;
+              }
+              .header { 
+                text-align: center; 
+                border-bottom: 3px solid #000;
+                padding-bottom: 10px;
+                margin-bottom: 10px;
+              }
+              .kitchen-title { 
+                font-size: 20px; 
+                font-weight: bold;
+                text-transform: uppercase;
+                margin-bottom: 5px;
+              }
+              .order-info { 
+                text-align: center;
+                font-size: 12px;
+                margin: 10px 0;
+                font-weight: bold;
+              }
+              .divider {
+                border-top: 2px solid #000;
+                margin: 10px 0;
+              }
+              .items-section {
+                margin: 10px 0;
+              }
+              .item-row {
+              display: block;
+              margin-bottom: 8px;
+              font-size: 13px;
+              }
+              .item-name {
+                font-weight: bold;
+                font-size: 14px;
+                text-transform: uppercase;
+              }
+              .item-quantity {
+                display: inline-block;
+                background: #000;
+                color: white;
+                padding: 2px 8px;
+                margin-right: 10px;
+                font-weight: bold;
+                min-width: 30px;
+                text-align: center;
+              }
+              .footer {
+                text-align: center;
+                margin-top: 20px;
+                padding-top: 10px;
+                border-top: 2px solid #000;
+                font-size: 11px;
+                font-weight: bold;
+              }
+              .timestamp {
+                font-size: 11px;
+                margin-top: 5px;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <div class="kitchen-title">KITCHEN ORDER</div>
+              <div style="font-size: 12px;">${currentSale.storeName}</div>
             </div>
             
-            <div style="text-align: center; margin-top: 30px;">
-              <div>Thank you for your business!</div>
+            <div class="order-info">
+              <div>Order #: ${currentSale.saleNumber}</div>
+              <div class="timestamp">${new Date(currentSale.saleDate).toLocaleString('en-US', { 
+                year: 'numeric', 
+                month: '2-digit', 
+                day: '2-digit', 
+                hour: '2-digit', 
+                minute: '2-digit' 
+              })}</div>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <div class="items-section">
+              ${currentSale.items.map(item => `
+                <div class="item-row">
+                  <span class="item-quantity">${item.quantity}x</span>
+                  <span class="item-name">${item.productName}</span>
+                </div>
+              `).join('')}
+            </div>
+            
+            <div class="divider"></div>
+            
+            <div class="footer">
+              <div>Customer: ${currentSale.customerName}</div>
+              <div style="margin-top: 5px;">Cashier: ${currentSale.cashierName}</div>
             </div>
           </body>
         </html>
       `;
       
-      printWindow?.document.write(receiptContent);
-      printWindow?.document.close();
-      printWindow?.print();
+    if (kitchenWindow) {
+      kitchenWindow.document.write(kitchenContent);
+      kitchenWindow.document.close();
+      // Position second window next to first one
+      kitchenWindow.moveTo(window.screenX + 100, window.screenY + 100);
+      kitchenWindow.focus(); // Bring to front
+      
+      if (autoPrint) {
+        setTimeout(() => {
+          kitchenWindow.print();
+        }, 500); // Slightly longer delay so invoice prints first
+      }
     }
   };
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>
+    <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
+      <Typography variant="h4" sx={{ fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' }, mb: 2 }}>
         Point of Sale (POS)
       </Typography>
 
-      <Box sx={{ display: 'flex', gap: 3 }}>
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: { xs: 'column', lg: 'row' },
+        gap: { xs: 2, md: 3 } 
+      }}>
         {/* Products Section */}
-        <Box sx={{ flex: 2 }}>
+        <Box sx={{ flex: { xs: '1 1 auto', lg: 2 }, order: { xs: 2, lg: 1 } }}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -399,12 +658,18 @@ const POS: React.FC = () => {
               </Typography>
               
               {/* Search and Filter */}
-              <Box sx={{ mb: 2, display: 'flex', gap: 2 }}>
+              <Box sx={{ 
+                mb: 2, 
+                display: 'flex', 
+                flexDirection: { xs: 'column', sm: 'row' },
+                gap: 2 
+              }}>
                 <TextField
                   fullWidth
                   placeholder="Search products or scan barcode..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  size={isMobile ? 'small' : 'medium'}
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
@@ -413,12 +678,13 @@ const POS: React.FC = () => {
                     ),
                   }}
                 />
-                <FormControl sx={{ minWidth: 150 }}>
+                <FormControl sx={{ minWidth: { xs: '100%', sm: 150 } }}>
                   <InputLabel>Category</InputLabel>
                   <Select
                     value={selectedCategory}
                     onChange={(e) => setSelectedCategory(e.target.value)}
                     label="Category"
+                    size={isMobile ? 'small' : 'medium'}
                   >
                     <MenuItem value="">All Categories</MenuItem>
                     {categories.map(category => (
@@ -431,7 +697,16 @@ const POS: React.FC = () => {
               </Box>
 
               {/* Products Grid */}
-              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 2 }}>
+              <Box sx={{ 
+                display: 'grid', 
+                gridTemplateColumns: { 
+                  xs: 'repeat(auto-fill, minmax(140px, 1fr))',
+                  sm: 'repeat(auto-fill, minmax(180px, 1fr))',
+                  md: 'repeat(auto-fill, minmax(220px, 1fr))',
+                  lg: 'repeat(auto-fill, minmax(250px, 1fr))'
+                }, 
+                gap: { xs: 1, sm: 2 } 
+              }}>
                 {filteredProducts.map(product => (
                   <Box key={product.productId}>
                     <Card 
@@ -448,11 +723,8 @@ const POS: React.FC = () => {
                         <Typography variant="body2" color="text.secondary">
                           {product.categoryName}
                         </Typography>
-                        <Typography variant="h6" color="primary">
+                        <Typography variant="h6" sx={{ color: '#000000', fontWeight: 'bold' }}>
                           ${product.price.toFixed(2)}
-                        </Typography>
-                        <Typography variant="body2">
-                          Stock: {product.availableQuantity} {product.unit}
                         </Typography>
                         {product.barcode && (
                           <Typography variant="caption" color="text.secondary">
@@ -469,7 +741,15 @@ const POS: React.FC = () => {
         </Box>
 
         {/* Cart Section */}
-        <Box sx={{ flex: 1 }}>
+        <Box sx={{ 
+          flex: { xs: '1 1 auto', lg: 1 }, 
+          order: { xs: 1, lg: 2 },
+          position: { xs: 'sticky', lg: 'static' },
+          top: { xs: 0, lg: 'auto' },
+          zIndex: { xs: 10, lg: 'auto' },
+          bgcolor: { xs: 'background.paper', lg: 'transparent' },
+          pb: { xs: 1, lg: 0 }
+        }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -485,8 +765,14 @@ const POS: React.FC = () => {
                 </Typography>
               ) : (
                 <>
-                  <TableContainer component={Paper} sx={{ maxHeight: 300 }}>
-                    <Table size="small">
+                  <TableContainer 
+                    component={Paper} 
+                    sx={{ 
+                      maxHeight: { xs: 200, sm: 300 },
+                      overflowX: 'auto'
+                    }}
+                  >
+                    <Table size="small" sx={{ minWidth: 400 }}>
                       <TableHead>
                         <TableRow>
                           <TableCell>Item</TableCell>
@@ -581,7 +867,18 @@ const POS: React.FC = () => {
       </Box>
 
       {/* Sale Dialog */}
-      <Dialog open={saleDialogOpen} onClose={() => setSaleDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog 
+        open={saleDialogOpen} 
+        onClose={() => setSaleDialogOpen(false)} 
+        maxWidth="sm" 
+        fullWidth
+        sx={{
+          '& .MuiDialog-paper': {
+            m: { xs: 1, sm: 2 },
+            width: { xs: 'calc(100% - 16px)', sm: 'auto' }
+          }
+        }}
+      >
         <DialogTitle>Complete Sale</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 1 }}>
@@ -666,17 +963,39 @@ const POS: React.FC = () => {
       </Dialog>
 
       {/* Receipt Dialog */}
-      <Dialog open={receiptDialogOpen} onClose={() => setReceiptDialogOpen(false)} maxWidth="md" fullWidth>
+      <Dialog 
+        open={receiptDialogOpen} 
+        onClose={() => setReceiptDialogOpen(false)} 
+        maxWidth="md" 
+        fullWidth
+        sx={{
+          '& .MuiDialog-paper': {
+            m: { xs: 1, sm: 2 },
+            width: { xs: 'calc(100% - 16px)', sm: 'auto' }
+          }
+        }}
+      >
         <DialogTitle>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
             <Typography variant="h6">Sale Receipt</Typography>
-            <Button
-              variant="outlined"
-              startIcon={<PrintIcon />}
-              onClick={printReceipt}
-            >
-              Print Receipt
-            </Button>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                variant="outlined"
+                startIcon={<PrintIcon />}
+                onClick={previewReceipts}
+                sx={{ borderColor: '#666', color: '#666' }}
+              >
+                Preview Invoices
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<PrintIcon />}
+                onClick={() => printReceipt(true, true)}
+                sx={{ bgcolor: '#000', '&:hover': { bgcolor: '#333' } }}
+              >
+                Print & Open Drawer
+              </Button>
+            </Box>
           </Box>
         </DialogTitle>
         <DialogContent>

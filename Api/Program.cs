@@ -52,15 +52,40 @@ builder.Services.AddHttpContextAccessor();
 // CORS
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
+    // Development: Allow all origins
+    if (builder.Environment.IsDevelopment())
     {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
-    });
+        options.AddPolicy("AllowAll", policy =>
+        {
+            policy.AllowAnyOrigin()
+                  .AllowAnyMethod()
+                  .AllowAnyHeader();
+        });
+    }
+    else
+    {
+        // Production: Allow specific frontend origins
+        var frontendUrls = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() 
+            ?? new[] { "https://donpaolo.netlify.app" };
+        
+        options.AddPolicy("AllowFrontend", policy =>
+        {
+            policy.WithOrigins(frontendUrls)
+                  .AllowAnyMethod()
+                  .AllowAnyHeader()
+                  .AllowCredentials();
+        });
+    }
 });
 
 var app = builder.Build();
+
+// Configure port for Render (uses PORT env var or defaults to 10000)
+var port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
+if (!app.Urls.Any())
+{
+    app.Urls.Add($"http://0.0.0.0:{port}");
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -70,7 +95,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseCors("AllowAll");
+app.UseCors(builder.Environment.IsDevelopment() ? "AllowAll" : "AllowFrontend");
 
 // Custom middleware
 app.UseMiddleware<AuditMiddleware>();

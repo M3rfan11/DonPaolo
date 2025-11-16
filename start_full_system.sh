@@ -1,5 +1,9 @@
 #!/bin/bash
+# Project location: /Users/osz/Desktop/gradproject (NEW PROJECT)
+PROJECT_ROOT="/Users/osz/Desktop/gradproject"
+
 echo "🚀 Starting Full Food & Beverage Management System..."
+echo "📍 Project location: $PROJECT_ROOT"
 
 # Function to kill background processes on exit
 cleanup() {
@@ -13,7 +17,7 @@ trap cleanup SIGINT SIGTERM
 
 # Start backend in background
 echo "Starting backend API..."
-cd Api
+cd "$PROJECT_ROOT/Api"
 dotnet run &
 BACKEND_PID=$!
 
@@ -22,7 +26,7 @@ sleep 5
 
 # Start frontend in background
 echo "Starting frontend React app..."
-cd ../frontend
+cd "$PROJECT_ROOT/frontend"
 npm start &
 FRONTEND_PID=$!
 

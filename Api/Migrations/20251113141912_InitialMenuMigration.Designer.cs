@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251012190408_InitialSqliteMigration")]
-    partial class InitialSqliteMigration
+    [Migration("20251113141912_InitialMenuMigration")]
+    partial class InitialMenuMigration
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -152,48 +152,6 @@ namespace Api.Migrations
                         .IsUnique();
 
                     b.ToTable("Categories");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            CreatedAt = new DateTime(2023, 1, 1, 10, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "All types of drinks including soft drinks, juices",
-                            IsActive = true,
-                            Name = "Beverages"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            CreatedAt = new DateTime(2023, 1, 1, 10, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Ready-to-eat food items and snacks",
-                            IsActive = true,
-                            Name = "Food Items"
-                        },
-                        new
-                        {
-                            Id = 3,
-                            CreatedAt = new DateTime(2023, 1, 1, 10, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Ingredients and raw materials for food preparation",
-                            IsActive = true,
-                            Name = "Raw Materials"
-                        },
-                        new
-                        {
-                            Id = 4,
-                            CreatedAt = new DateTime(2023, 1, 1, 10, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Packaging materials and containers",
-                            IsActive = true,
-                            Name = "Packaging"
-                        },
-                        new
-                        {
-                            Id = 5,
-                            CreatedAt = new DateTime(2023, 1, 1, 10, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Cleaning and sanitization supplies",
-                            IsActive = true,
-                            Name = "Cleaning Supplies"
-                        });
                 });
 
             modelBuilder.Entity("Api.Models.Customer", b =>
@@ -854,42 +812,42 @@ namespace Api.Migrations
                         new
                         {
                             Id = 1,
-                            CreatedAt = new DateTime(2025, 10, 12, 19, 4, 7, 716, DateTimeKind.Utc).AddTicks(7060),
+                            CreatedAt = new DateTime(2025, 11, 13, 14, 19, 11, 455, DateTimeKind.Utc).AddTicks(620),
                             Description = "System Administrator - Full access to everything",
                             Name = "Admin"
                         },
                         new
                         {
                             Id = 2,
-                            CreatedAt = new DateTime(2025, 10, 12, 19, 4, 7, 716, DateTimeKind.Utc).AddTicks(8790),
+                            CreatedAt = new DateTime(2025, 11, 13, 14, 19, 11, 455, DateTimeKind.Utc).AddTicks(5730),
                             Description = "Regular User - Can manage own account and make requests",
                             Name = "User"
                         },
                         new
                         {
                             Id = 3,
-                            CreatedAt = new DateTime(2025, 10, 12, 19, 4, 7, 716, DateTimeKind.Utc).AddTicks(8800),
+                            CreatedAt = new DateTime(2025, 11, 13, 14, 19, 11, 455, DateTimeKind.Utc).AddTicks(5770),
                             Description = "Store Manager - Manages assigned store, products, and inventory",
                             Name = "StoreManager"
                         },
                         new
                         {
                             Id = 4,
-                            CreatedAt = new DateTime(2025, 10, 12, 19, 4, 7, 716, DateTimeKind.Utc).AddTicks(8800),
+                            CreatedAt = new DateTime(2025, 11, 13, 14, 19, 11, 455, DateTimeKind.Utc).AddTicks(5770),
                             Description = "Warehouse Manager - Manages warehouse operations and stock",
                             Name = "WarehouseManager"
                         },
                         new
                         {
                             Id = 5,
-                            CreatedAt = new DateTime(2025, 10, 12, 19, 4, 7, 716, DateTimeKind.Utc).AddTicks(8800),
+                            CreatedAt = new DateTime(2025, 11, 13, 14, 19, 11, 455, DateTimeKind.Utc).AddTicks(5780),
                             Description = "Sales Staff - Handles sales and customer orders",
                             Name = "SalesStaff"
                         },
                         new
                         {
                             Id = 6,
-                            CreatedAt = new DateTime(2025, 10, 12, 19, 4, 7, 716, DateTimeKind.Utc).AddTicks(8800),
+                            CreatedAt = new DateTime(2025, 11, 13, 14, 19, 11, 455, DateTimeKind.Utc).AddTicks(5790),
                             Description = "Purchase Staff - Handles purchase orders and supplier management",
                             Name = "PurchaseStaff"
                         });

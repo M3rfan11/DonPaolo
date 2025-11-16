@@ -2,15 +2,14 @@ namespace Api.DTOs;
 
 public class SalesReportResponse
 {
-    public int Year { get; set; }
-    public int? Quarter { get; set; }
+    public DateTime? FromDate { get; set; }
+    public DateTime? ToDate { get; set; }
     public int? StoreId { get; set; }
     public decimal TotalSales { get; set; }
     public int TotalOrders { get; set; }
     public decimal AverageOrderValue { get; set; }
-    public List<QuarterlySalesData> QuarterlyData { get; set; } = new List<QuarterlySalesData>();
+    public List<DailySalesData> DailyData { get; set; } = new List<DailySalesData>();
     public List<TopProductData> TopProducts { get; set; } = new List<TopProductData>();
-    public List<StorePerformanceData> StorePerformance { get; set; } = new List<StorePerformanceData>();
     public DateTime GeneratedAt { get; set; }
 }
 

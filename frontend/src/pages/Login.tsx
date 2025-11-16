@@ -59,7 +59,7 @@ const Login: React.FC = () => {
   return (
     <Box sx={{ 
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      background: '#ffffff',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -68,39 +68,36 @@ const Login: React.FC = () => {
       <Container component="main" maxWidth="sm">
         <Fade in timeout={800}>
           <Paper sx={{ 
-            p: 6, 
+            p: { xs: 4, sm: 6 }, 
             borderRadius: 3,
-            background: 'linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%)',
+            background: '#ffffff',
             boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
-            border: '1px solid rgba(255,255,255,0.2)'
+            border: '1px solid rgba(0,0,0,0.1)'
           }}>
-            {/* Heritage Brand Header */}
+            {/* DON PAOLO Brand Header */}
             <Box sx={{ textAlign: 'center', mb: 4 }}>
               <Grow in timeout={1000}>
                 <Avatar sx={{ 
-                  bgcolor: 'primary.main', 
-                  width: 80, 
-                  height: 80,
+                  bgcolor: '#000000', 
+                  width: { xs: 60, sm: 80 }, 
+                  height: { xs: 60, sm: 80 },
                   mx: 'auto',
                   mb: 3,
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  boxShadow: '0 4px 20px rgba(102, 126, 234, 0.4)'
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
                 }}>
-                  <StoreIcon sx={{ fontSize: 40 }} />
+                  <StoreIcon sx={{ fontSize: { xs: 30, sm: 40 }, color: 'white' }} />
                 </Avatar>
               </Grow>
               <Typography variant="h3" sx={{ 
                 fontWeight: 'bold',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                mb: 1
+                color: '#000000',
+                mb: 1,
+                fontSize: { xs: '1.75rem', sm: '2.5rem' }
               }}>
-                Heritage
+                DON PAOLO
               </Typography>
-              <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 300, mb: 2 }}>
-                Perfumes Store Management System
+              <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 300, mb: 2, fontStyle: 'italic' }}>
+                Ristorante Italiano Artigianale
               </Typography>
               <Typography variant="body1" color="text.secondary">
                 Sign in to access your dashboard
@@ -155,12 +152,14 @@ const Login: React.FC = () => {
                   mt: 2,
                   mb: 2,
                   py: 1.5,
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  background: '#000000',
+                  color: 'white',
                   borderRadius: 2,
                   fontWeight: 'bold',
                   fontSize: '1.1rem',
                   '&:hover': {
-                    boxShadow: '0 8px 20px rgba(102, 126, 234, 0.4)',
+                    background: '#333333',
+                    boxShadow: '0 8px 20px rgba(0, 0, 0, 0.3)',
                     transform: 'translateY(-2px)'
                   }
                 }}

@@ -159,3 +159,4 @@ Desktop.ini
 backend.log
 authrbac_dev.db-shm
 authrbac_dev.db-wal
+.project_location

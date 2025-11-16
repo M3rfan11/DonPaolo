@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Api.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialSqliteMigration : Migration
+    public partial class InitialMenuMigration : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -537,28 +537,16 @@ namespace Api.Migrations
                 });
 
             migrationBuilder.InsertData(
-                table: "Categories",
-                columns: new[] { "Id", "CreatedAt", "Description", "IsActive", "Name", "UpdatedAt" },
-                values: new object[,]
-                {
-                    { 1, new DateTime(2023, 1, 1, 10, 0, 0, 0, DateTimeKind.Utc), "All types of drinks including soft drinks, juices", true, "Beverages", null },
-                    { 2, new DateTime(2023, 1, 1, 10, 0, 0, 0, DateTimeKind.Utc), "Ready-to-eat food items and snacks", true, "Food Items", null },
-                    { 3, new DateTime(2023, 1, 1, 10, 0, 0, 0, DateTimeKind.Utc), "Ingredients and raw materials for food preparation", true, "Raw Materials", null },
-                    { 4, new DateTime(2023, 1, 1, 10, 0, 0, 0, DateTimeKind.Utc), "Packaging materials and containers", true, "Packaging", null },
-                    { 5, new DateTime(2023, 1, 1, 10, 0, 0, 0, DateTimeKind.Utc), "Cleaning and sanitization supplies", true, "Cleaning Supplies", null }
-                });
-
-            migrationBuilder.InsertData(
                 table: "Roles",
                 columns: new[] { "Id", "CreatedAt", "Description", "Name" },
                 values: new object[,]
                 {
-                    { 1, new DateTime(2025, 10, 12, 19, 4, 7, 716, DateTimeKind.Utc).AddTicks(7060), "System Administrator - Full access to everything", "Admin" },
-                    { 2, new DateTime(2025, 10, 12, 19, 4, 7, 716, DateTimeKind.Utc).AddTicks(8790), "Regular User - Can manage own account and make requests", "User" },
-                    { 3, new DateTime(2025, 10, 12, 19, 4, 7, 716, DateTimeKind.Utc).AddTicks(8800), "Store Manager - Manages assigned store, products, and inventory", "StoreManager" },
-                    { 4, new DateTime(2025, 10, 12, 19, 4, 7, 716, DateTimeKind.Utc).AddTicks(8800), "Warehouse Manager - Manages warehouse operations and stock", "WarehouseManager" },
-                    { 5, new DateTime(2025, 10, 12, 19, 4, 7, 716, DateTimeKind.Utc).AddTicks(8800), "Sales Staff - Handles sales and customer orders", "SalesStaff" },
-                    { 6, new DateTime(2025, 10, 12, 19, 4, 7, 716, DateTimeKind.Utc).AddTicks(8800), "Purchase Staff - Handles purchase orders and supplier management", "PurchaseStaff" }
+                    { 1, new DateTime(2025, 11, 13, 14, 19, 11, 455, DateTimeKind.Utc).AddTicks(620), "System Administrator - Full access to everything", "Admin" },
+                    { 2, new DateTime(2025, 11, 13, 14, 19, 11, 455, DateTimeKind.Utc).AddTicks(5730), "Regular User - Can manage own account and make requests", "User" },
+                    { 3, new DateTime(2025, 11, 13, 14, 19, 11, 455, DateTimeKind.Utc).AddTicks(5770), "Store Manager - Manages assigned store, products, and inventory", "StoreManager" },
+                    { 4, new DateTime(2025, 11, 13, 14, 19, 11, 455, DateTimeKind.Utc).AddTicks(5770), "Warehouse Manager - Manages warehouse operations and stock", "WarehouseManager" },
+                    { 5, new DateTime(2025, 11, 13, 14, 19, 11, 455, DateTimeKind.Utc).AddTicks(5780), "Sales Staff - Handles sales and customer orders", "SalesStaff" },
+                    { 6, new DateTime(2025, 11, 13, 14, 19, 11, 455, DateTimeKind.Utc).AddTicks(5790), "Purchase Staff - Handles purchase orders and supplier management", "PurchaseStaff" }
                 });
 
             migrationBuilder.InsertData(

@@ -5,47 +5,31 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
-import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
-import Profile from './pages/Profile';
 import POS from './pages/POS';
-import Orders from './pages/Orders';
-import OrderStatus from './pages/OrderStatus';
-import Users from './pages/Users';
-import Categories from './pages/Categories';
-import Products from './pages/Products';
-import Inventory from './pages/Inventory';
-import Purchases from './pages/Purchases';
-import Sales from './pages/Sales';
-import Assembly from './pages/Assembly';
-import Requests from './pages/Requests';
-import StoreManagement from './pages/StoreManagement';
-import CustomerStore from './pages/CustomerStore';
-import CustomerOrders from './pages/CustomerOrders';
-import ProductDetail from './pages/ProductDetail';
 import Reports from './pages/Reports';
+import SuperAdminDashboard from './pages/SuperAdminDashboard';
 
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#667eea',
-      light: '#8fa4f3',
-      dark: '#4a5ba8',
+      main: '#000000',
+      light: '#333333',
+      dark: '#000000',
       contrastText: '#ffffff',
     },
     secondary: {
-      main: '#764ba2',
-      light: '#9575cd',
-      dark: '#5e3a7a',
-      contrastText: '#ffffff',
+      main: '#ffffff',
+      light: '#f5f5f5',
+      dark: '#e0e0e0',
+      contrastText: '#000000',
     },
     background: {
-      default: '#f8f9ff',
+      default: '#ffffff',
       paper: '#ffffff',
     },
     text: {
-      primary: '#2c3e50',
-      secondary: '#6c757d',
+      primary: '#000000',
+      secondary: '#666666',
     },
     success: {
       main: '#4caf50',
@@ -139,99 +123,40 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 const AppRoutes: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
 
-  // Determine default route based on user role
   const getDefaultRoute = () => {
-    if (user?.roles?.includes('Cashier')) {
-      return '/pos';
+    if (user?.roles?.includes('SuperAdmin')) {
+      return '/admin';
     }
-    if (user?.roles?.includes('Customer')) {
-      return '/customer-store';
-    }
-    return '/';
+    return '/pos';
   };
 
   return (
     <Routes>
       <Route path="/login" element={isAuthenticated ? <Navigate to={getDefaultRoute()} /> : <Login />} />
-      <Route path="/register" element={isAuthenticated ? <Navigate to={getDefaultRoute()} /> : <Register />} />
       <Route
         path="/*"
         element={
           <ProtectedRoute>
             <Layout>
               <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/pos" element={<POS />} />
-                <Route path="/orders" element={<Orders />} />
-                <Route path="/order-status" element={<OrderStatus />} />
-                <Route path="/products" element={<Products />} />
-                <Route path="/inventory" element={<Inventory />} />
-                {/* SuperAdmin routes - Global scope */}
+                {/* SuperAdmin routes - Tabbed dashboard */}
                 {user?.roles?.includes('SuperAdmin') && (
                   <>
-                    <Route path="/users" element={<Users />} />
-                    <Route path="/categories" element={<Categories />} />
-                    <Route path="/purchases" element={<Purchases />} />
-                    <Route path="/sales" element={<Sales />} />
-                    <Route path="/assembly" element={<Assembly />} />
-                    <Route path="/store-management" element={<StoreManagement />} />
-                    <Route path="/requests" element={<Requests />} />
-                    <Route path="/reports" element={<Reports />} />
+                    <Route path="/admin" element={<SuperAdminDashboard />} />
+                    <Route path="/" element={<Navigate to="/admin" />} />
                   </>
                 )}
-
-                {/* StoreManager routes - Single-store scope */}
-                {user?.roles?.includes('StoreManager') && (
-                  <>
-                    <Route path="/users" element={<Users />} />
-                    <Route path="/purchases" element={<Purchases />} />
-                    <Route path="/sales" element={<Sales />} />
-                    <Route path="/assembly" element={<Assembly />} />
-                    <Route path="/requests" element={<Requests />} />
-                    <Route path="/reports" element={<Reports />} />
-                  </>
-                )}
-
-                {/* WarehouseManager routes - Warehouse-bound scope */}
-                {user?.roles?.includes('WarehouseManager') && (
-                  <>
-                    <Route path="/assembly" element={<Assembly />} />
-                    <Route path="/requests" element={<Requests />} />
-                    <Route path="/reports" element={<Reports />} />
-                  </>
-                )}
-
-                {/* SalesStaff routes - POS-focused */}
+                
+                {/* Cashier routes - Only POS */}
                 {user?.roles?.includes('Cashier') && (
                   <>
                     <Route path="/pos" element={<POS />} />
-                    <Route path="/requests" element={<Requests />} />
+                    <Route path="/" element={<Navigate to="/pos" />} />
                   </>
                 )}
-
-                {/* StoreManager routes - Store management including online orders */}
-                {user?.roles?.includes('StoreManager') && (
-                  <>
-                    <Route path="/online-orders" element={<Orders />} />
-                    <Route path="/online-inventory" element={<Inventory />} />
-                  </>
-                )}
-
-                {/* Customer routes - Online shopping and order tracking */}
-                {user?.roles?.includes('Customer') && (
-                  <>
-                    <Route path="/customer-store" element={<CustomerStore />} />
-                    <Route path="/customer-orders" element={<CustomerOrders />} />
-                    <Route path="/product/:id" element={<ProductDetail />} />
-                  </>
-                )}
-
-                {/* Common routes for all roles */}
-                <Route path="/requests" element={<Requests />} />
-                <Route path="/product/:id" element={<ProductDetail />} />
-                {/* Redirect unauthorized users to dashboard */}
-                <Route path="*" element={<Navigate to="/" />} />
+                
+                {/* Default redirect */}
+                <Route path="*" element={<Navigate to={getDefaultRoute()} />} />
               </Routes>
             </Layout>
           </ProtectedRoute>
