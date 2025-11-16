@@ -60,14 +60,6 @@ interface DailySalesData {
   averageOrderValue: number;
 }
 
-interface StoreBreakdownData {
-  storeId: number;
-  storeName: string;
-  totalSales: number;
-  orderCount: number;
-}
-
-
 const Reports: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
