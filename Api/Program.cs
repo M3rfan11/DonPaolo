@@ -45,28 +45,38 @@ if (connectionString.StartsWith("postgresql://") || connectionString.StartsWith(
         var dbPort = uri.Port > 0 ? uri.Port : 5432;
         var database = uri.AbsolutePath.TrimStart('/');
         
-        // Check if this is a Supabase connection (use connection pooler for better reliability)
+        // Check if this is a Supabase connection
         bool isSupabase = host.Contains("supabase.co");
         
-        // For Supabase, use connection pooler (port 6543) if port is 5432, or use provided port
-        // Connection pooler is more reliable for external connections
+        // IMPORTANT: Supabase deprecated Session Mode on port 6543 (now Transaction Mode only)
+        // EF Core requires Session Mode, so we must use port 5432
+        // Port 6543 is only for Transaction Mode (not compatible with EF Core)
         int finalPort = dbPort;
-        if (isSupabase && dbPort == 5432)
+        
+        if (isSupabase)
         {
-            // Try connection pooler first (port 6543), but allow override
-            finalPort = 6543;
-            Console.WriteLine($"[DB Config] Detected Supabase - using connection pooler (port 6543)");
+            // Force port 5432 for Supabase (Session Mode required for EF Core)
+            // If user provided 6543, switch to 5432 and log warning
+            if (dbPort == 6543)
+            {
+                finalPort = 5432;
+                Console.WriteLine($"[DB Config] WARNING: Port 6543 is Transaction Mode only. Switching to port 5432 (Session Mode) for EF Core compatibility");
+            }
+            else if (dbPort == 5432)
+            {
+                Console.WriteLine($"[DB Config] Detected Supabase - using port 5432 (Session Mode)");
+            }
         }
         
         // Build standard Npgsql connection string
-        // Force IPv4 to avoid IPv6 connectivity issues
         // Include connection timeout and command timeout for better reliability
+        // Note: Supabase uses IPv6 by default, but Npgsql should handle this
         connectionString = $"Host={host};Port={finalPort};Database={database};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true;Include Error Detail=true;Timeout=30;Command Timeout=30";
         
-        // For Supabase, also try to force IPv4 resolution
+        // For Supabase, add additional connection parameters
         if (isSupabase)
         {
-            connectionString += ";No Reset On Close=true";
+            connectionString += ";No Reset On Close=true;Keepalive=30";
         }
         
         Console.WriteLine($"[DB Config] Converted URI to standard connection string format (port: {finalPort})");
@@ -199,9 +209,11 @@ using (var scope = app.Services.CreateScope())
         
         logger.LogInformation("Attempting to connect to database...");
         
-        // Test database connection
-        if (await context.Database.CanConnectAsync())
+        // Test database connection with detailed error logging
+        try
         {
+            if (await context.Database.CanConnectAsync())
+            {
             logger.LogInformation("Database connection successful. Running migrations...");
             
             try
@@ -316,10 +328,48 @@ using (var scope = app.Services.CreateScope())
             }
             
             logger.LogInformation("Database setup completed (with possible warnings above).");
+            }
+            else
+            {
+                logger.LogWarning("Cannot connect to database. Please check your connection string.");
+            }
         }
-        else
+        catch (Exception connectionEx)
         {
-            logger.LogWarning("Cannot connect to database. Please check your connection string.");
+            // Log detailed connection error
+            logger.LogError(connectionEx, "Database connection failed. Error: {ErrorMessage}", connectionEx.Message);
+            
+            if (connectionEx.InnerException != null)
+            {
+                logger.LogError("Inner exception: {InnerMessage}", connectionEx.InnerException.Message);
+                logger.LogError("Inner exception type: {InnerType}", connectionEx.InnerException.GetType().Name);
+                
+                var innerMessage = connectionEx.InnerException.Message;
+                
+                if (innerMessage.Contains("Network is unreachable") || innerMessage.Contains("No route to host"))
+                {
+                    logger.LogError("NETWORK CONNECTIVITY ISSUE:");
+                    logger.LogError("This usually means:");
+                    logger.LogError("  1. Supabase network restrictions are blocking Render's IP");
+                    logger.LogError("  2. IPv6 connectivity issue (Supabase uses IPv6 by default)");
+                    logger.LogError("SOLUTION: Go to Supabase → Settings → Database → Network Restrictions");
+                    logger.LogError("  Make sure 'Your database can be accessed by all IP addresses'");
+                }
+                else if (innerMessage.Contains("password authentication failed") || innerMessage.Contains("authentication failed"))
+                {
+                    logger.LogError("AUTHENTICATION FAILED:");
+                    logger.LogError("The database password in your connection string is incorrect.");
+                    logger.LogError("SOLUTION: Verify your Supabase database password in the connection string");
+                }
+                else if (innerMessage.Contains("does not exist") || innerMessage.Contains("database"))
+                {
+                    logger.LogError("DATABASE NOT FOUND:");
+                    logger.LogError("The database name in your connection string is incorrect.");
+                    logger.LogError("SOLUTION: Verify the database name is 'postgres' in your connection string");
+                }
+            }
+            
+            logger.LogWarning("Application will continue without database connection. Fix the connection string and redeploy.");
         }
     }
     catch (Exception ex)

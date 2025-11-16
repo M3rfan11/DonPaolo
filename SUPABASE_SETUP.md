@@ -23,17 +23,15 @@ This guide will help you set up your database on Supabase and connect it to your
    - It looks like: `postgresql://postgres:[YOUR-PASSWORD]@db.xxxxx.supabase.co:5432/postgres`
 4. **Important**: Replace `[YOUR-PASSWORD]` with the password you set when creating the project
 
-### Option B: Connection Pooler (Recommended for External Connections) ✅
-**If you get "Network is unreachable" errors, use the connection pooler instead:**
+### Option B: Connection Pooler (For High Traffic) 
+**Note**: Port 6543 is Transaction Mode only (deprecated for Session Mode). EF Core requires Session Mode, so use port 5432.
 
-1. In Supabase dashboard, go to **Settings** → **Database**
-2. Scroll down to **"Connection string"**
-3. Look for **"Connection pooling"** section or **"Session mode"** tab
-4. Copy the connection string with port **6543** (connection pooler)
-   - Format: `postgresql://postgres:[YOUR-PASSWORD]@db.xxxxx.supabase.co:6543/postgres`
-5. **Or manually change port from 5432 to 6543** in your connection string
+If you need connection pooling for high traffic:
+1. Use Supabase's connection pooler with Session Mode (port 5432)
+2. The pooler host format: `aws-0-[REGION].pooler.supabase.com:5432`
+3. Check Supabase dashboard → Settings → Database for the exact pooler connection string
 
-**Note**: The application will automatically detect Supabase and try the connection pooler (port 6543) if the direct connection fails.
+**Important**: The application automatically uses port 5432 for Supabase (Session Mode required for EF Core).
 
 ## 📋 Step 3: Update Render Environment Variable
 
@@ -136,12 +134,14 @@ Based on your migrations, you have these tables:
 
 **This is the most common issue when connecting to Supabase from Render.**
 
-**Solution 1: Use Connection Pooler (Recommended) ✅**
-1. Update your connection string in Render to use port **6543** instead of 5432:
+**Solution 1: Verify Connection String Format ✅**
+1. Make sure you're using port **5432** (Session Mode required for EF Core)
+2. Port 6543 is Transaction Mode only and won't work with EF Core
+3. Connection string format:
    ```
-   postgresql://postgres:YOUR_PASSWORD@db.jjznaktpwigboqyozcbo.supabase.co:6543/postgres
+   postgresql://postgres:YOUR_PASSWORD@db.jjznaktpwigboqyozcbo.supabase.co:5432/postgres
    ```
-2. The application code will automatically detect Supabase and use port 6543 if you're using port 5432, but you can explicitly set it.
+4. The application code will automatically detect Supabase and ensure port 5432 is used.
 
 **Solution 2: Check Network Restrictions in Supabase**
 1. Go to Supabase → **Settings** → **Database**
