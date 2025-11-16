@@ -6,7 +6,6 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import POS from './pages/POS';
-import Reports from './pages/Reports';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
 
 const theme = createTheme({

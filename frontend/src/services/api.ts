@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosResponse } from 'axios';
+import axios, { AxiosInstance } from 'axios';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5152';
 
@@ -707,6 +707,7 @@ class ApiService {
   // Sales Order status filtering
   async getSalesOrdersByStatus(status: string) {
     const response = await this.api.get(`/api/Sales/status/${status}`);
+    return response.data;
   }
 
 
@@ -951,4 +952,5 @@ class ApiService {
 
 }
 
-export default new ApiService();
+const apiService = new ApiService();
+export default apiService;

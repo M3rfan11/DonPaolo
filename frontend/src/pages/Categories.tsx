@@ -13,7 +13,6 @@ import {
   Card,
   CardContent,
   Typography,
-  IconButton,
   Menu,
   MenuItem,
 } from '@mui/material';
@@ -26,10 +25,9 @@ import {
   Category,
   CategoryOutlined,
 } from '@mui/icons-material';
-import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 
-interface Category {
+interface CategoryType {
   id: number;
   name: string;
   description: string;
@@ -38,14 +36,13 @@ interface Category {
 }
 
 const Categories: React.FC = () => {
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<CategoryType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [openDialog, setOpenDialog] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [editingCategory, setEditingCategory] = useState<CategoryType | null>(null);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
-  const { user: currentUser } = useAuth();
+  const [selectedCategory, setSelectedCategory] = useState<CategoryType | null>(null);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -80,7 +77,7 @@ const Categories: React.FC = () => {
     setOpenDialog(true);
   };
 
-  const handleOpenEditDialog = (category: Category) => {
+  const handleOpenEditDialog = (category: CategoryType) => {
     setEditingCategory(category);
     setFormData({
       name: category.name,
@@ -120,7 +117,7 @@ const Categories: React.FC = () => {
     }
   };
 
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, category: Category) => {
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, category: CategoryType) => {
     setAnchorEl(event.currentTarget);
     setSelectedCategory(category);
   };

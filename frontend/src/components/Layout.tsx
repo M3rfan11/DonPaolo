@@ -14,29 +14,12 @@ import {
   Button,
   ListItemIcon,
   ListItemText,
-  MenuList,
-  Paper,
-  ClickAwayListener,
 } from '@mui/material';
 import {
   Dashboard,
-  Inventory,
-  ShoppingCart,
   PointOfSale,
-  Build,
-  RequestQuote,
-  Assessment,
-  AccountCircle,
   Logout,
-  People,
-  Person,
-  Receipt,
   Store,
-  ArrowDropDown,
-  Storefront,
-  Category,
-  TrendingUp,
-  Settings,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -64,13 +47,9 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [managementMenuAnchor, setManagementMenuAnchor] = useState<null | HTMLElement>(null);
-  const [operationsMenuAnchor, setOperationsMenuAnchor] = useState<null | HTMLElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
-  
-  const menuItems = getMenuItems(user?.roles || []);
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -80,31 +59,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     setAnchorEl(null);
   };
 
-  const handleManagementMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setManagementMenuAnchor(event.currentTarget);
-  };
-
-  const handleManagementMenuClose = () => {
-    setManagementMenuAnchor(null);
-  };
-
-  const handleOperationsMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setOperationsMenuAnchor(event.currentTarget);
-  };
-
-  const handleOperationsMenuClose = () => {
-    setOperationsMenuAnchor(null);
-  };
-
   const handleLogout = () => {
     logout();
     handleMenuClose();
-  };
-
-  const handleNavigation = (path: string) => {
-    navigate(path);
-    handleManagementMenuClose();
-    handleOperationsMenuClose();
   };
 
   return (

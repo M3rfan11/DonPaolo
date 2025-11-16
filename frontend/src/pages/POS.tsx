@@ -60,17 +60,6 @@ interface CartItem {
   totalPrice: number;
 }
 
-interface Customer {
-  id: number;
-  fullName: string;
-  phoneNumber: string;
-  email?: string;
-  address?: string;
-  createdAt: string;
-  updatedAt?: string;
-  isActive: boolean;
-}
-
 interface SaleResponse {
   saleNumber: string;
   saleId: number;
@@ -116,6 +105,7 @@ const POS: React.FC = () => {
 
   useEffect(() => {
     loadProducts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadProducts = async () => {
@@ -221,9 +211,7 @@ const POS: React.FC = () => {
       return;
     }
 
-    const product = products.find(p => p.productId === productId);
     // No stock check - inventory not used
-
     setCart(cart.map(item =>
       item.productId === productId
         ? { ...item, quantity: newQuantity, totalPrice: newQuantity * item.unitPrice }

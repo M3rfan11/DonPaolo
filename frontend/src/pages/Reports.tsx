@@ -4,10 +4,6 @@ import {
   Card,
   CardContent,
   Typography,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Button,
   Table,
   TableBody,
@@ -19,15 +15,8 @@ import {
   Chip,
   LinearProgress,
   Alert,
-  Tabs,
-  Tab,
   Divider,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
   IconButton,
-  Tooltip,
   Container,
   Fade,
   Grow,
@@ -35,24 +24,14 @@ import {
   TextField,
 } from '@mui/material';
 import {
-  TrendingUp,
-  TrendingDown,
-  Assessment,
-  Store,
-  Schedule,
   ShoppingCart,
   AttachMoney,
-  BarChart,
-  PieChart,
+  Assessment,
   Refresh,
   Star,
-  Inventory,
-  SwapHoriz,
-  Warning,
   EmojiEvents,
 } from '@mui/icons-material';
 import apiService from '../services/api';
-import { useAuth } from '../contexts/AuthContext';
 
 interface SalesReport {
   fromDate?: string;
@@ -66,39 +45,6 @@ interface SalesReport {
   generatedAt: string;
 }
 
-interface PurchaseReport {
-  year: number;
-  quarter?: number;
-  storeId?: number;
-  totalPurchases: number;
-  totalOrders: number;
-  averageOrderValue: number;
-  quarterlyData: QuarterlyPurchaseData[];
-  topSuppliers: TopSupplierData[];
-  recentOrders?: RecentPurchaseOrderData[];
-  generatedAt: string;
-}
-
-interface PeakSalesReport {
-  year: number;
-  quarter?: number;
-  storeId?: number;
-  hourlyAnalysis: HourlySalesData[];
-  dailyAnalysis: DailySalesData[];
-  peakHours: PeakHourData[];
-  peakDays: DailySalesData[];
-  generatedAt: string;
-}
-
-interface QuarterlySalesData {
-  quarter: number;
-  totalSales: number;
-  orderCount: number;
-  averageOrderValue: number;
-  topProducts: TopProductData[];
-  peakHours: PeakHourData[];
-  storeBreakdown: StoreBreakdownData[];
-}
 
 interface QuarterlyPurchaseData {
   quarter: number;
@@ -161,88 +107,8 @@ interface StoreBreakdownData {
   orderCount: number;
 }
 
-interface StorePerformanceData {
-  storeId: number;
-  storeName: string;
-  totalSales: number;
-  averageOrderValue: number;
-}
-
-interface ProductMovementReport {
-  fromDate: string;
-  toDate: string;
-  productId?: number;
-  productName?: string;
-  warehouseId?: number;
-  warehouseName?: string;
-  movementType?: string;
-  direction?: string;
-  totalRecords: number;
-  pageNumber: number;
-  pageSize: number;
-  totalPages: number;
-  movements: ProductMovement[];
-  summary: ProductMovementSummary;
-}
-
-interface ProductMovement {
-  id: number;
-  productId: number;
-  productName: string;
-  productSKU: string;
-  warehouseId: number;
-  warehouseName: string;
-  movementType: string;
-  quantity: number;
-  unit: string;
-  direction: string;
-  description?: string;
-  referenceNumber?: string;
-  referenceId?: number;
-  referenceType?: string;
-  createdByUserName?: string;
-  movementDate: string;
-  createdAt: string;
-  notes?: string;
-}
-
-interface ProductMovementSummary {
-  productId: number;
-  productName: string;
-  productSKU: string;
-  warehouseId: number;
-  warehouseName: string;
-  summaryDate: string;
-  openingBalance: number;
-  totalIn: number;
-  totalOut: number;
-  closingBalance: number;
-  purchaseCount: number;
-  saleCount: number;
-  assemblyCount: number;
-  transferCount: number;
-  adjustmentCount: number;
-  netMovement: number;
-}
-
-interface ProductMovementAnalytics {
-  fromDate: string;
-  toDate: string;
-  totalMovements: number;
-  totalProducts: number;
-  totalWarehouses: number;
-  totalQuantityIn: number;
-  totalQuantityOut: number;
-  netMovement: number;
-  movementTypeCounts: Record<string, number>;
-  movementTypeQuantities: Record<string, number>;
-  topMovingProducts: ProductMovementSummary[];
-  warehouseActivity: ProductMovementSummary[];
-  recentMovements: ProductMovement[];
-}
 
 const Reports: React.FC = () => {
-  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -256,23 +122,11 @@ const Reports: React.FC = () => {
   
   // Report data
   const [salesReport, setSalesReport] = useState<SalesReport | null>(null);
-  
-  // Available stores
-  const [stores, setStores] = useState<any[]>([]);
 
   useEffect(() => {
-    loadStores();
     loadReports();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fromDate, toDate]);
-
-  const loadStores = async () => {
-    try {
-      const warehouses = await apiService.getWarehouses();
-      setStores(warehouses);
-    } catch (error) {
-      console.error('Error loading stores:', error);
-    }
-  };
 
 
   const loadReports = async () => {
