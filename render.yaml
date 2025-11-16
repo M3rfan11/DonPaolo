@@ -1,7 +1,6 @@
 services:
   - type: web
     name: donpaolo-api
-    # Runtime auto-detected from .csproj file (no need to specify)
     plan: free  # Change to 'starter' ($7/month) for production - always-on service
     region: oregon  # Options: oregon, frankfurt, singapore, mumbai (choose closest to users)
     buildCommand: cd Api && dotnet restore && dotnet publish -c Release -o ./publish
@@ -14,11 +13,9 @@ services:
         value: http://0.0.0.0:$PORT
       - key: PORT
         value: 10000
-      # Database connection - automatically set from PostgreSQL service below
+      # Supabase Database Connection - Set manually in Render dashboard with your Supabase connection string
       - key: ConnectionStrings__DefaultConnection
-        fromDatabase:
-          name: donpaolo-db
-          property: connectionString
+        sync: false  # IMPORTANT: Set this manually with your Supabase connection string from Step 2
       # JWT Configuration - Set these manually in Render dashboard after deployment
       - key: Jwt__Key
         sync: false  # IMPORTANT: Set this manually in Render dashboard (generate with: openssl rand -base64 32)
@@ -33,10 +30,14 @@ services:
       - key: EnableSwagger
         value: "true"
 
-databases:
-  - name: donpaolo-db
-    plan: free  # Change to 'starter' ($7/month) for production
-    databaseName: donpaolo
-    user: donpaolo_user
-    # PostgreSQL version (default is latest)
-    postgresMajorVersion: 15
+# Databases section removed - using Supabase instead
+# To use Supabase:
+# 1. Create a project on supabase.com
+# 2. Get your connection string from Settings → Database
+# 3. Set ConnectionStrings__DefaultConnection environment variable in Render dashboard
+# databases:
+#   - name: donpaolo-db
+#     plan: free
+#     databaseName: donpaolo
+#     user: donpaolo_user
+#     postgresMajorVersion: 15
