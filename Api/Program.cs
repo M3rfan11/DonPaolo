@@ -31,11 +31,30 @@ if (string.IsNullOrWhiteSpace(connectionString))
         "3. Or manually set ConnectionStrings__DefaultConnection environment variable in Render dashboard");
 }
 
-// Convert DATABASE_URL format to connection string if needed
+// Convert PostgreSQL URI format to standard connection string if needed
 if (connectionString.StartsWith("postgresql://") || connectionString.StartsWith("postgres://"))
 {
-    // Npgsql can handle URI format, but let's ensure it's correct
-    // The URI format should work directly with Npgsql
+    try
+    {
+        // Parse the URI format: postgresql://user:password@host:port/database
+        var uri = new Uri(connectionString);
+        var userInfo = uri.UserInfo.Split(':');
+        var username = userInfo.Length > 0 ? Uri.UnescapeDataString(userInfo[0]) : "";
+        var password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "";
+        var host = uri.Host;
+        var port = uri.Port > 0 ? uri.Port : 5432;
+        var database = uri.AbsolutePath.TrimStart('/');
+        
+        // Build standard Npgsql connection string
+        connectionString = $"Host={host};Port={port};Database={database};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true";
+        
+        Console.WriteLine($"[DB Config] Converted URI to standard connection string format");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[DB Config] Error converting URI format: {ex.Message}");
+        // Continue with original connection string - Npgsql might handle it
+    }
 }
 
 // Log connection string format (mask password for security)
