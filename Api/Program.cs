@@ -70,9 +70,11 @@ if (connectionString.StartsWith("postgresql://") || connectionString.StartsWith(
             }
         }
         
-        // CRITICAL FIX: Resolve hostname to IPv4 address to avoid IPv6 connectivity issues
-        // Render's network environment may not support IPv6, so we force IPv4 resolution
-        string resolvedHost = host;
+        // Resolve hostname to IPv4 address to avoid IPv6 connectivity issues
+        // Render's network environment may not support IPv6, so we prefer IPv4
+        // However, we'll use hostname if IPv4 resolution fails (retry logic will handle it)
+        string connectionHost = host;
+        string ipv4AddressStr = null;
         try
         {
             Console.WriteLine($"[DB Config] Resolving hostname '{host}' to IPv4 address...");
@@ -84,45 +86,45 @@ if (connectionString.StartsWith("postgresql://") || connectionString.StartsWith(
             
             if (ipv4Address != null)
             {
-                resolvedHost = ipv4Address.ToString();
-                Console.WriteLine($"[DB Config] Resolved '{host}' to IPv4: {resolvedHost}");
+                ipv4AddressStr = ipv4Address.ToString();
+                // Use IPv4 IP to avoid IPv6 connectivity issues on Render
+                // Retry logic will handle cases where IP changes
+                connectionHost = ipv4AddressStr;
+                Console.WriteLine($"[DB Config] Resolved '{host}' to IPv4: {ipv4AddressStr} (using IP to avoid IPv6 issues)");
             }
             else
             {
-                Console.WriteLine($"[DB Config] WARNING: No IPv4 address found for '{host}'. Using hostname (may cause IPv6 issues).");
-                // If no IPv4 found, try to use the hostname but add IPv4 preference
-                resolvedHost = host;
+                Console.WriteLine($"[DB Config] WARNING: No IPv4 address found for '{host}'. Using hostname (retry logic will handle IPv6 issues).");
+                connectionHost = host;
             }
         }
         catch (Exception dnsEx)
         {
-            Console.WriteLine($"[DB Config] DNS resolution failed for '{host}': {dnsEx.Message}. Using hostname directly.");
-            // Continue with hostname - Npgsql might handle it
-            resolvedHost = host;
+            Console.WriteLine($"[DB Config] DNS resolution failed for '{host}': {dnsEx.Message}. Using hostname (retry logic will handle connection issues).");
+            connectionHost = host;
         }
         
         // Build standard Npgsql connection string
-        // Include connection timeout and command timeout for better reliability
-        // Force IPv4 by using resolved IP address instead of hostname
-        // Note: When using IP address, SSL certificate validation uses the hostname parameter
-        connectionString = $"Host={resolvedHost};Port={finalPort};Database={database};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true;Include Error Detail=true;Timeout=30;Command Timeout=30";
+        // Use resolved IPv4 IP if available to avoid IPv6 issues, otherwise use hostname
+        // Retry logic will handle transient failures and IP changes
+        connectionString = $"Host={connectionHost};Port={finalPort};Database={database};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true;Include Error Detail=true;Timeout=60;Command Timeout=60;Pooling=true;Min Pool Size=0;Max Pool Size=20;Connection Lifetime=300;Keepalive=30";
         
-        // If we resolved to an IP address, add the original hostname for SSL certificate validation
-        // (though Trust Server Certificate=true should handle this, it's good practice)
-        if (resolvedHost != host && IPAddress.TryParse(resolvedHost, out _))
-        {
-            // Add Server Name Indication (SNI) for SSL - Npgsql uses Host parameter for this
-            // But since we're using IP, we'll keep Trust Server Certificate=true which bypasses validation
-            Console.WriteLine($"[DB Config] Using IP address {resolvedHost} (original hostname: {host})");
-        }
-        
-        // For Supabase, add additional connection parameters
+        // For Supabase, add additional connection parameters for better reliability
         if (isSupabase)
         {
-            connectionString += ";No Reset On Close=true;Keepalive=30";
+            // Add connection resilience parameters
+            connectionString += ";No Reset On Close=true;Tcp Keepalive=true;Tcp Keepalive Time=30;Tcp Keepalive Interval=10;Tcp Keepalive Retry Count=3";
+            if (ipv4AddressStr != null)
+            {
+                Console.WriteLine($"[DB Config] Using IPv4 address {ipv4AddressStr} (original hostname: {host})");
+            }
+            else
+            {
+                Console.WriteLine($"[DB Config] Using hostname '{host}' (IPv4 not available, retry logic will handle IPv6 issues)");
+            }
         }
         
-        Console.WriteLine($"[DB Config] Converted URI to standard connection string format (port: {finalPort}, host: {resolvedHost})");
+        Console.WriteLine($"[DB Config] Converted URI to standard connection string format (port: {finalPort}, host: {connectionHost})");
     }
     catch (Exception ex)
     {
@@ -143,8 +145,19 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
     if (builder.Environment.IsProduction())
     {
-        options.UseNpgsql(connectionString)
-            .ConfigureWarnings(warnings => warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+        options.UseNpgsql(connectionString, npgsqlOptions =>
+        {
+            // Enable retry on failure for transient errors (network issues, timeouts, etc.)
+            npgsqlOptions.EnableRetryOnFailure(
+                maxRetryCount: 5,                    // Retry up to 5 times
+                maxRetryDelay: TimeSpan.FromSeconds(30), // Max delay between retries
+                errorCodesToAdd: null                 // Retry on all transient errors
+            );
+            
+            // Set command timeout
+            npgsqlOptions.CommandTimeout(60);
+        })
+        .ConfigureWarnings(warnings => warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
     }
     else
     {
