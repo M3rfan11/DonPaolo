@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "9P2Nnkh142I=",
+  "dgSpecHash": "N1J2BW7XqqY=",
   "success": true,
   "projectFilePath": "/Users/osz/Desktop/gradproject/Api/Api.csproj",
   "expectedPackageFiles": [
@@ -47,6 +47,8 @@
     "/Users/osz/.nuget/packages/microsoft.identitymodel.tokens/8.2.1/microsoft.identitymodel.tokens.8.2.1.nupkg.sha512",
     "/Users/osz/.nuget/packages/microsoft.openapi/1.6.22/microsoft.openapi.1.6.22.nupkg.sha512",
     "/Users/osz/.nuget/packages/mono.texttemplating/3.0.0/mono.texttemplating.3.0.0.nupkg.sha512",
+    "/Users/osz/.nuget/packages/npgsql/9.0.3/npgsql.9.0.3.nupkg.sha512",
+    "/Users/osz/.nuget/packages/npgsql.entityframeworkcore.postgresql/9.0.4/npgsql.entityframeworkcore.postgresql.9.0.4.nupkg.sha512",
     "/Users/osz/.nuget/packages/sqlitepclraw.bundle_e_sqlite3/2.1.10/sqlitepclraw.bundle_e_sqlite3.2.1.10.nupkg.sha512",
     "/Users/osz/.nuget/packages/sqlitepclraw.core/2.1.10/sqlitepclraw.core.2.1.10.nupkg.sha512",
     "/Users/osz/.nuget/packages/sqlitepclraw.lib.e_sqlite3/2.1.10/sqlitepclraw.lib.e_sqlite3.2.1.10.nupkg.sha512",

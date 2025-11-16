@@ -2,32 +2,41 @@ services:
   - type: web
     name: donpaolo-api
     env: dotnet
-    plan: free  # Change to 'starter' ($7/month) for production
-    region: oregon  # Choose: oregon, frankfurt, singapore, mumbai
+    plan: free  # Change to 'starter' ($7/month) for production - always-on service
+    region: oregon  # Options: oregon, frankfurt, singapore, mumbai (choose closest to users)
     buildCommand: cd Api && dotnet restore && dotnet publish -c Release -o ./publish
-    startCommand: cd Api/publish && dotnet Api.dll --urls http://0.0.0.0:10000
+    startCommand: cd Api/publish && dotnet Api.dll --urls http://0.0.0.0:$PORT
     healthCheckPath: /api/Health
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
       - key: ASPNETCORE_URLS
-        value: http://0.0.0.0:10000
+        value: http://0.0.0.0:$PORT
+      - key: PORT
+        value: 10000
+      # Database connection - automatically set from PostgreSQL service below
       - key: ConnectionStrings__DefaultConnection
         fromDatabase:
           name: donpaolo-db
           property: connectionString
+      # JWT Configuration - Set these manually in Render dashboard after deployment
       - key: Jwt__Key
-        sync: false  # Set this manually in Render dashboard
+        sync: false  # IMPORTANT: Set this manually in Render dashboard (generate with: openssl rand -base64 32)
       - key: Jwt__Issuer
-        value: https://donpaolo-api.onrender.com
+        value: https://donpaolo-api.onrender.com  # Will be updated automatically with your service URL
       - key: Jwt__Audience
-        sync: false  # Set this manually with your frontend URL
+        sync: false  # Set this to your frontend URL (e.g., https://donpaolo.netlify.app)
+      # CORS Configuration - Set this manually with your frontend URL
       - key: AllowedOrigins__0
-        sync: false  # Set this manually with your frontend URL
+        sync: false  # Set this to your frontend URL (e.g., https://donpaolo.netlify.app)
+      # Optional: Disable Swagger in production (set to false)
+      - key: EnableSwagger
+        value: "true"
 
 databases:
   - name: donpaolo-db
     plan: free  # Change to 'starter' ($7/month) for production
     databaseName: donpaolo
     user: donpaolo_user
-
+    # PostgreSQL version (default is latest)
+    postgresMajorVersion: 15
