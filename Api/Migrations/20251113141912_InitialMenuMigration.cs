@@ -1,6 +1,5 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
-using Npgsql.EntityFrameworkCore.PostgreSQL.Migrations;
 
 #nullable disable
 
@@ -20,7 +19,7 @@ namespace Api.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                        .Annotation("Npgsql:ValueGenerationStrategy", "IdentityByDefaultColumn"),
                     Name = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
                     Description = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
                     IsActive = table.Column<bool>(type: "INTEGER", nullable: false),
@@ -38,7 +37,7 @@ namespace Api.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                        .Annotation("Npgsql:ValueGenerationStrategy", "IdentityByDefaultColumn"),
                     FullName = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
                     PhoneNumber = table.Column<string>(type: "TEXT", maxLength: 20, nullable: true),
                     Email = table.Column<string>(type: "TEXT", maxLength: 255, nullable: true),
@@ -58,7 +57,7 @@ namespace Api.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                        .Annotation("Npgsql:ValueGenerationStrategy", "IdentityByDefaultColumn"),
                     Name = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
                     Description = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP")
@@ -74,7 +73,7 @@ namespace Api.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                        .Annotation("Npgsql:ValueGenerationStrategy", "IdentityByDefaultColumn"),
                     Name = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
                     Description = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
                     Price = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
@@ -106,7 +105,7 @@ namespace Api.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                        .Annotation("Npgsql:ValueGenerationStrategy", "IdentityByDefaultColumn"),
                     ActorUserId = table.Column<int>(type: "INTEGER", nullable: true),
                     Entity = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
                     EntityId = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
@@ -128,7 +127,7 @@ namespace Api.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                        .Annotation("Npgsql:ValueGenerationStrategy", "IdentityByDefaultColumn"),
                     ProductAssemblyId = table.Column<int>(type: "INTEGER", nullable: false),
                     RawProductId = table.Column<int>(type: "INTEGER", nullable: false),
                     WarehouseId = table.Column<int>(type: "INTEGER", nullable: false),
@@ -156,7 +155,7 @@ namespace Api.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                        .Annotation("Npgsql:ValueGenerationStrategy", "IdentityByDefaultColumn"),
                     OrderId = table.Column<int>(type: "INTEGER", nullable: false),
                     Status = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
                     Notes = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
@@ -175,7 +174,7 @@ namespace Api.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                        .Annotation("Npgsql:ValueGenerationStrategy", "IdentityByDefaultColumn"),
                     Name = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
                     Description = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
                     Quantity = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
@@ -204,7 +203,7 @@ namespace Api.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                        .Annotation("Npgsql:ValueGenerationStrategy", "IdentityByDefaultColumn"),
                     ProductId = table.Column<int>(type: "INTEGER", nullable: false),
                     WarehouseId = table.Column<int>(type: "INTEGER", nullable: false),
                     Quantity = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
@@ -232,7 +231,7 @@ namespace Api.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                        .Annotation("Npgsql:ValueGenerationStrategy", "IdentityByDefaultColumn"),
                     ProductId = table.Column<int>(type: "INTEGER", nullable: false),
                     WarehouseId = table.Column<int>(type: "INTEGER", nullable: false),
                     MovementType = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
@@ -265,7 +264,7 @@ namespace Api.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                        .Annotation("Npgsql:ValueGenerationStrategy", "IdentityByDefaultColumn"),
                     ProductId = table.Column<int>(type: "INTEGER", nullable: false),
                     WarehouseId = table.Column<int>(type: "INTEGER", nullable: false),
                     SummaryDate = table.Column<DateTime>(type: "TEXT", nullable: false),
@@ -298,7 +297,7 @@ namespace Api.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                        .Annotation("Npgsql:ValueGenerationStrategy", "IdentityByDefaultColumn"),
                     ProductRequestId = table.Column<int>(type: "INTEGER", nullable: false),
                     ProductId = table.Column<int>(type: "INTEGER", nullable: false),
                     QuantityRequested = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
@@ -326,7 +325,7 @@ namespace Api.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                        .Annotation("Npgsql:ValueGenerationStrategy", "IdentityByDefaultColumn"),
                     RequestedByUserId = table.Column<int>(type: "INTEGER", nullable: false),
                     RequestDate = table.Column<DateTime>(type: "TEXT", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
                     Status = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
@@ -350,7 +349,7 @@ namespace Api.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                        .Annotation("Npgsql:ValueGenerationStrategy", "IdentityByDefaultColumn"),
                     PurchaseOrderId = table.Column<int>(type: "INTEGER", nullable: false),
                     ProductId = table.Column<int>(type: "INTEGER", nullable: false),
                     WarehouseId = table.Column<int>(type: "INTEGER", nullable: false),
@@ -379,7 +378,7 @@ namespace Api.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                        .Annotation("Npgsql:ValueGenerationStrategy", "IdentityByDefaultColumn"),
                     OrderNumber = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
                     SupplierName = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
                     SupplierAddress = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
@@ -407,7 +406,7 @@ namespace Api.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                        .Annotation("Npgsql:ValueGenerationStrategy", "IdentityByDefaultColumn"),
                     SalesOrderId = table.Column<int>(type: "INTEGER", nullable: false),
                     ProductId = table.Column<int>(type: "INTEGER", nullable: false),
                     WarehouseId = table.Column<int>(type: "INTEGER", nullable: false),
@@ -436,7 +435,7 @@ namespace Api.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                        .Annotation("Npgsql:ValueGenerationStrategy", "IdentityByDefaultColumn"),
                     OrderNumber = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
                     CustomerName = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
                     CustomerAddress = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
@@ -470,7 +469,7 @@ namespace Api.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                        .Annotation("Npgsql:ValueGenerationStrategy", "IdentityByDefaultColumn"),
                     UserId = table.Column<int>(type: "INTEGER", nullable: false),
                     ProductId = table.Column<int>(type: "INTEGER", nullable: false),
                     Quantity = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
@@ -515,7 +514,7 @@ namespace Api.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                        .Annotation("Npgsql:ValueGenerationStrategy", "IdentityByDefaultColumn"),
                     FullName = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
                     Email = table.Column<string>(type: "TEXT", maxLength: 255, nullable: false),
                     PasswordHash = table.Column<string>(type: "TEXT", nullable: false),
@@ -535,7 +534,7 @@ namespace Api.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                        .Annotation("Npgsql:ValueGenerationStrategy", "IdentityByDefaultColumn"),
                     Name = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
                     Address = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true),
                     City = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
