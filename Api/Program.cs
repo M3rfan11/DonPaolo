@@ -47,6 +47,13 @@ if (connectionString.StartsWith("postgresql://") || connectionString.StartsWith(
         var dbPort = uri.Port > 0 ? uri.Port : 5432;
         var database = uri.AbsolutePath.TrimStart('/');
         
+        // Debug logging for pooler connections
+        Console.WriteLine($"[DB Config] Parsed username: {username}");
+        Console.WriteLine($"[DB Config] Parsed host: {host}");
+        Console.WriteLine($"[DB Config] Parsed port: {dbPort}");
+        Console.WriteLine($"[DB Config] Parsed database: {database}");
+        Console.WriteLine($"[DB Config] Password length: {(string.IsNullOrEmpty(password) ? 0 : password.Length)}");
+        
         // Check if this is a Supabase connection
         bool isSupabase = host.Contains("supabase.co");
         
@@ -71,14 +78,24 @@ if (connectionString.StartsWith("postgresql://") || connectionString.StartsWith(
         }
         
         // Resolve hostname to IPv4 address to avoid IPv6 connectivity issues
-        // Render's network environment may not support IPv6, so we prefer IPv4
-        // However, we'll use hostname if IPv4 resolution fails (retry logic will handle it)
+        // Render's network environment may not support IPv6, so we MUST use IPv4
+        // Try multiple DNS resolution methods to find IPv4
         string connectionHost = host;
         string ipv4AddressStr = null;
+        
         try
         {
             Console.WriteLine($"[DB Config] Resolving hostname '{host}' to IPv4 address...");
+            
+            // Try GetHostEntry first (most common)
             var hostEntry = Dns.GetHostEntry(host);
+            Console.WriteLine($"[DB Config] DNS returned {hostEntry.AddressList.Length} address(es)");
+            
+            // Log all addresses for debugging
+            foreach (var addr in hostEntry.AddressList)
+            {
+                Console.WriteLine($"[DB Config] Found address: {addr} (Family: {addr.AddressFamily})");
+            }
             
             // Find the first IPv4 address
             var ipv4Address = hostEntry.AddressList
@@ -87,26 +104,42 @@ if (connectionString.StartsWith("postgresql://") || connectionString.StartsWith(
             if (ipv4Address != null)
             {
                 ipv4AddressStr = ipv4Address.ToString();
-                // Use IPv4 IP to avoid IPv6 connectivity issues on Render
-                // Retry logic will handle cases where IP changes
                 connectionHost = ipv4AddressStr;
-                Console.WriteLine($"[DB Config] Resolved '{host}' to IPv4: {ipv4AddressStr} (using IP to avoid IPv6 issues)");
+                Console.WriteLine($"[DB Config] ✅ Resolved '{host}' to IPv4: {ipv4AddressStr}");
             }
             else
             {
-                Console.WriteLine($"[DB Config] WARNING: No IPv4 address found for '{host}'. Using hostname (retry logic will handle IPv6 issues).");
-                connectionHost = host;
+                // Try GetHostAddresses as fallback
+                Console.WriteLine($"[DB Config] No IPv4 in GetHostEntry, trying GetHostAddresses...");
+                var addresses = Dns.GetHostAddresses(host);
+                var ipv4FromAddresses = addresses.FirstOrDefault(ip => ip.AddressFamily == AddressFamily.InterNetwork);
+                
+                if (ipv4FromAddresses != null)
+                {
+                    ipv4AddressStr = ipv4FromAddresses.ToString();
+                    connectionHost = ipv4AddressStr;
+                    Console.WriteLine($"[DB Config] ✅ Found IPv4 via GetHostAddresses: {ipv4AddressStr}");
+                }
+                else
+                {
+                    Console.WriteLine($"[DB Config] ⚠️ WARNING: No IPv4 address found for '{host}'");
+                    Console.WriteLine($"[DB Config] ⚠️ This will likely cause connection failures on Render");
+                    Console.WriteLine($"[DB Config] ⚠️ SOLUTION: Use Supabase connection pooler or check Supabase network settings");
+                    // Still use hostname, but this will likely fail
+                    connectionHost = host;
+                }
             }
         }
         catch (Exception dnsEx)
         {
-            Console.WriteLine($"[DB Config] DNS resolution failed for '{host}': {dnsEx.Message}. Using hostname (retry logic will handle connection issues).");
+            Console.WriteLine($"[DB Config] ❌ DNS resolution failed for '{host}': {dnsEx.Message}");
+            Console.WriteLine($"[DB Config] ⚠️ This will likely cause connection failures");
             connectionHost = host;
         }
         
         // Build standard Npgsql connection string
-        // Use resolved IPv4 IP if available to avoid IPv6 issues, otherwise use hostname
-        // Retry logic will handle transient failures and IP changes
+        // Use resolved IPv4 IP if available to avoid IPv6 issues
+        // If no IPv4 found, we'll still try hostname but connection will likely fail
         connectionString = $"Host={connectionHost};Port={finalPort};Database={database};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true;Include Error Detail=true;Timeout=60;Command Timeout=60;Pooling=true;Min Pool Size=0;Max Pool Size=20;Connection Lifetime=300;Keepalive=30";
         
         // For Supabase, add additional connection parameters for better reliability
@@ -114,13 +147,19 @@ if (connectionString.StartsWith("postgresql://") || connectionString.StartsWith(
         {
             // Add connection resilience parameters
             connectionString += ";No Reset On Close=true;Tcp Keepalive=true;Tcp Keepalive Time=30;Tcp Keepalive Interval=10;Tcp Keepalive Retry Count=3";
+            
             if (ipv4AddressStr != null)
             {
-                Console.WriteLine($"[DB Config] Using IPv4 address {ipv4AddressStr} (original hostname: {host})");
+                Console.WriteLine($"[DB Config] ✅ Using IPv4 address: {ipv4AddressStr} (original hostname: {host})");
             }
             else
             {
-                Console.WriteLine($"[DB Config] Using hostname '{host}' (IPv4 not available, retry logic will handle IPv6 issues)");
+                Console.WriteLine($"[DB Config] ❌ CRITICAL: No IPv4 address found - connection will likely fail!");
+                Console.WriteLine($"[DB Config] 💡 SOLUTION OPTIONS:");
+                Console.WriteLine($"[DB Config]    1. Use Supabase Connection Pooler (check Supabase dashboard)");
+                Console.WriteLine($"[DB Config]    2. Contact Supabase support about IPv4 availability");
+                Console.WriteLine($"[DB Config]    3. Check Supabase → Settings → Database → Network Restrictions");
+                Console.WriteLine($"[DB Config] ⚠️  Attempting connection with hostname (may fail due to IPv6)");
             }
         }
         
@@ -268,9 +307,41 @@ using (var scope = app.Services.CreateScope())
         // Test database connection with detailed error logging
         try
         {
-            if (await context.Database.CanConnectAsync())
+            logger.LogInformation("Testing database connection...");
+            
+            // Try to get the actual connection string for debugging (masked)
+            var connString = context.Database.GetConnectionString();
+            if (!string.IsNullOrEmpty(connString))
             {
-            logger.LogInformation("Database connection successful. Running migrations...");
+                var maskedConn = connString.Contains("@") 
+                    ? connString.Substring(0, Math.Min(connString.IndexOf("@"), 50)) + "@***" 
+                    : connString.Substring(0, Math.Min(50, connString.Length)) + "***";
+                logger.LogInformation("Connection string (masked): {MaskedConn}", maskedConn);
+            }
+            
+            // Try to connect and catch any exceptions
+            bool canConnect = false;
+            try
+            {
+                canConnect = await context.Database.CanConnectAsync();
+            }
+            catch (Exception connectEx)
+            {
+                logger.LogError(connectEx, "Exception during CanConnectAsync:");
+                logger.LogError("Error Type: {Type}", connectEx.GetType().Name);
+                logger.LogError("Error Message: {Message}", connectEx.Message);
+                if (connectEx.InnerException != null)
+                {
+                    logger.LogError("Inner Exception: {InnerType} - {InnerMessage}", 
+                        connectEx.InnerException.GetType().Name, 
+                        connectEx.InnerException.Message);
+                }
+                throw; // Re-throw to be caught by outer catch
+            }
+            
+            if (canConnect)
+            {
+            logger.LogInformation("✅ Database connection successful! Running migrations...");
             
             try
             {
@@ -387,45 +458,81 @@ using (var scope = app.Services.CreateScope())
             }
             else
             {
-                logger.LogWarning("Cannot connect to database. Please check your connection string.");
+                logger.LogError("❌ Cannot connect to database. Connection test returned false.");
+                logger.LogError("This usually means:");
+                logger.LogError("  1. Database server is not reachable");
+                logger.LogError("  2. Network connectivity issues (IPv6/IPv4)");
+                logger.LogError("  3. Firewall blocking the connection");
+                logger.LogError("  4. Incorrect connection string");
+                logger.LogError("Check the logs above for DNS resolution details.");
             }
         }
         catch (Exception connectionEx)
         {
             // Log detailed connection error
-            logger.LogError(connectionEx, "Database connection failed. Error: {ErrorMessage}", connectionEx.Message);
+            logger.LogError(connectionEx, "❌ Database connection failed!");
+            logger.LogError("Error Type: {ErrorType}", connectionEx.GetType().Name);
+            logger.LogError("Error Message: {ErrorMessage}", connectionEx.Message);
+            
+            // Log full stack trace for debugging
+            logger.LogError("Stack Trace: {StackTrace}", connectionEx.StackTrace);
             
             if (connectionEx.InnerException != null)
             {
-                logger.LogError("Inner exception: {InnerMessage}", connectionEx.InnerException.Message);
-                logger.LogError("Inner exception type: {InnerType}", connectionEx.InnerException.GetType().Name);
+                logger.LogError("--- Inner Exception ---");
+                logger.LogError("Type: {InnerType}", connectionEx.InnerException.GetType().Name);
+                logger.LogError("Message: {InnerMessage}", connectionEx.InnerException.Message);
                 
                 var innerMessage = connectionEx.InnerException.Message;
                 
-                if (innerMessage.Contains("Network is unreachable") || innerMessage.Contains("No route to host"))
+                if (innerMessage.Contains("Network is unreachable") || innerMessage.Contains("No route to host") || innerMessage.Contains("Name or service not known"))
                 {
-                    logger.LogError("NETWORK CONNECTIVITY ISSUE:");
+                    logger.LogError("🔴 NETWORK CONNECTIVITY ISSUE DETECTED:");
                     logger.LogError("This usually means:");
-                    logger.LogError("  1. Supabase network restrictions are blocking Render's IP");
-                    logger.LogError("  2. IPv6 connectivity issue (Supabase uses IPv6 by default)");
-                    logger.LogError("SOLUTION: Go to Supabase → Settings → Database → Network Restrictions");
-                    logger.LogError("  Make sure 'Your database can be accessed by all IP addresses'");
+                    logger.LogError("  1. Supabase hostname cannot be resolved to IPv4");
+                    logger.LogError("  2. Render's network cannot reach Supabase (IPv6 issue)");
+                    logger.LogError("  3. Supabase network restrictions are blocking Render's IP");
+                    logger.LogError("");
+                    logger.LogError("💡 SOLUTIONS:");
+                    logger.LogError("  A. Use Supabase Connection Pooler (has better IPv4 support)");
+                    logger.LogError("     → Go to Supabase Dashboard → Settings → Database");
+                    logger.LogError("     → Look for 'Connection Pooling' section");
+                    logger.LogError("     → Use the pooler connection string instead");
+                    logger.LogError("");
+                    logger.LogError("  B. Check Supabase Network Restrictions:");
+                    logger.LogError("     → Go to Supabase → Settings → Database → Network Restrictions");
+                    logger.LogError("     → Make sure 'Your database can be accessed by all IP addresses' is enabled");
+                    logger.LogError("");
+                    logger.LogError("  C. Contact Supabase Support:");
+                    logger.LogError("     → Ask about IPv4 availability for your region");
                 }
                 else if (innerMessage.Contains("password authentication failed") || innerMessage.Contains("authentication failed"))
                 {
-                    logger.LogError("AUTHENTICATION FAILED:");
+                    logger.LogError("🔴 AUTHENTICATION FAILED:");
                     logger.LogError("The database password in your connection string is incorrect.");
-                    logger.LogError("SOLUTION: Verify your Supabase database password in the connection string");
+                    logger.LogError("SOLUTION: Verify your Supabase database password matches the connection string");
                 }
                 else if (innerMessage.Contains("does not exist") || innerMessage.Contains("database"))
                 {
-                    logger.LogError("DATABASE NOT FOUND:");
+                    logger.LogError("🔴 DATABASE NOT FOUND:");
                     logger.LogError("The database name in your connection string is incorrect.");
                     logger.LogError("SOLUTION: Verify the database name is 'postgres' in your connection string");
                 }
+                else if (innerMessage.Contains("timeout") || innerMessage.Contains("timed out"))
+                {
+                    logger.LogError("🔴 CONNECTION TIMEOUT:");
+                    logger.LogError("The database server did not respond in time.");
+                    logger.LogError("This could indicate network issues or server overload.");
+                }
+                else
+                {
+                    logger.LogError("🔴 UNKNOWN CONNECTION ERROR:");
+                    logger.LogError("Please check the error message above for details.");
+                }
             }
             
-            logger.LogWarning("Application will continue without database connection. Fix the connection string and redeploy.");
+            logger.LogWarning("⚠️ Application will continue without database connection.");
+            logger.LogWarning("⚠️ Fix the connection string and redeploy to enable database features.");
         }
     }
     catch (Exception ex)

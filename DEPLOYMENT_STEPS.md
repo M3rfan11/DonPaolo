@@ -14,6 +14,30 @@
 
 ## Step 2: Get Supabase Connection String
 
+### ⚠️ IMPORTANT: Use Connection Pooler for Better IPv4 Support
+
+Supabase's direct connection may only resolve to IPv6, which Render cannot access. **Use the Connection Pooler instead** for better compatibility.
+
+### Option A: Connection Pooler (RECOMMENDED for Render)
+
+1. In your Supabase project dashboard, go to **Settings** → **Database**
+2. Scroll down to **"Connection Pooling"** section
+3. Select **"Session Mode"** (required for EF Core)
+4. Copy the **"Connection string"** - it looks like:
+   ```
+   postgresql://postgres.xxxxx:[YOUR-PASSWORD]@aws-0-us-east-1.pooler.supabase.com:5432/postgres?pgbouncer=true
+   ```
+   OR
+   ```
+   postgresql://postgres:[YOUR-PASSWORD]@aws-0-us-east-1.pooler.supabase.com:6543/postgres
+   ```
+5. **IMPORTANT**: 
+   - Replace `[YOUR-PASSWORD]` with your actual password
+   - If you see port `6543`, change it to `5432` (Session Mode)
+   - The pooler typically has better IPv4 support
+
+### Option B: Direct Connection (May Have IPv6 Issues)
+
 1. In your Supabase project dashboard, go to **Settings** → **Database**
 2. Scroll down to **"Connection string"** section
 3. Select **"URI"** tab
@@ -22,10 +46,7 @@
    postgresql://postgres:[YOUR-PASSWORD]@db.xxxxx.supabase.co:5432/postgres
    ```
 5. **IMPORTANT**: Replace `[YOUR-PASSWORD]` with the actual password you set when creating the project
-6. The final connection string should look like:
-   ```
-   postgresql://postgres:your_actual_password@db.xxxxx.supabase.co:5432/postgres
-   ```
+6. **WARNING**: This may only resolve to IPv6, which Render cannot access. Use Option A if you encounter connection issues.
 
 ## Step 3: Update render.yaml for Supabase
 
