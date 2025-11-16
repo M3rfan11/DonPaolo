@@ -391,180 +391,455 @@ CREATE INDEX IF NOT EXISTS "IX_OrderTrackings_UpdatedByUserId" ON "OrderTracking
 -- ============================================
 -- Create Foreign Keys
 -- ============================================
+-- Note: PostgreSQL doesn't support IF NOT EXISTS with ADD CONSTRAINT
+-- So we use DO blocks to check if constraint exists first
 
 -- Users foreign keys
-ALTER TABLE "Users" 
-ADD CONSTRAINT IF NOT EXISTS "FK_Users_Warehouses_AssignedStoreId" 
-FOREIGN KEY ("AssignedStoreId") REFERENCES "Warehouses" ("Id") ON DELETE SET NULL;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_Users_Warehouses_AssignedStoreId'
+    ) THEN
+        ALTER TABLE "Users" 
+        ADD CONSTRAINT "FK_Users_Warehouses_AssignedStoreId" 
+        FOREIGN KEY ("AssignedStoreId") REFERENCES "Warehouses" ("Id") ON DELETE SET NULL;
+    END IF;
+END $$;
 
 -- UserRoles foreign keys
-ALTER TABLE "UserRoles" 
-ADD CONSTRAINT IF NOT EXISTS "FK_UserRoles_Users_UserId" 
-FOREIGN KEY ("UserId") REFERENCES "Users" ("Id") ON DELETE CASCADE;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_UserRoles_Users_UserId'
+    ) THEN
+        ALTER TABLE "UserRoles" 
+        ADD CONSTRAINT "FK_UserRoles_Users_UserId" 
+        FOREIGN KEY ("UserId") REFERENCES "Users" ("Id") ON DELETE CASCADE;
+    END IF;
+END $$;
 
-ALTER TABLE "UserRoles" 
-ADD CONSTRAINT IF NOT EXISTS "FK_UserRoles_Roles_RoleId" 
-FOREIGN KEY ("RoleId") REFERENCES "Roles" ("Id") ON DELETE CASCADE;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_UserRoles_Roles_RoleId'
+    ) THEN
+        ALTER TABLE "UserRoles" 
+        ADD CONSTRAINT "FK_UserRoles_Roles_RoleId" 
+        FOREIGN KEY ("RoleId") REFERENCES "Roles" ("Id") ON DELETE CASCADE;
+    END IF;
+END $$;
 
 -- Products foreign keys
-ALTER TABLE "Products" 
-ADD CONSTRAINT IF NOT EXISTS "FK_Products_Categories_CategoryId" 
-FOREIGN KEY ("CategoryId") REFERENCES "Categories" ("Id") ON DELETE RESTRICT;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_Products_Categories_CategoryId'
+    ) THEN
+        ALTER TABLE "Products" 
+        ADD CONSTRAINT "FK_Products_Categories_CategoryId" 
+        FOREIGN KEY ("CategoryId") REFERENCES "Categories" ("Id") ON DELETE RESTRICT;
+    END IF;
+END $$;
 
 -- Warehouses foreign keys
-ALTER TABLE "Warehouses" 
-ADD CONSTRAINT IF NOT EXISTS "FK_Warehouses_Users_ManagerUserId" 
-FOREIGN KEY ("ManagerUserId") REFERENCES "Users" ("Id") ON DELETE SET NULL;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_Warehouses_Users_ManagerUserId'
+    ) THEN
+        ALTER TABLE "Warehouses" 
+        ADD CONSTRAINT "FK_Warehouses_Users_ManagerUserId" 
+        FOREIGN KEY ("ManagerUserId") REFERENCES "Users" ("Id") ON DELETE SET NULL;
+    END IF;
+END $$;
 
 -- AuditLogs foreign keys
-ALTER TABLE "AuditLogs" 
-ADD CONSTRAINT IF NOT EXISTS "FK_AuditLogs_Users_ActorUserId" 
-FOREIGN KEY ("ActorUserId") REFERENCES "Users" ("Id") ON DELETE SET NULL;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_AuditLogs_Users_ActorUserId'
+    ) THEN
+        ALTER TABLE "AuditLogs" 
+        ADD CONSTRAINT "FK_AuditLogs_Users_ActorUserId" 
+        FOREIGN KEY ("ActorUserId") REFERENCES "Users" ("Id") ON DELETE SET NULL;
+    END IF;
+END $$;
 
 -- ProductInventories foreign keys
-ALTER TABLE "ProductInventories" 
-ADD CONSTRAINT IF NOT EXISTS "FK_ProductInventories_Products_ProductId" 
-FOREIGN KEY ("ProductId") REFERENCES "Products" ("Id") ON DELETE CASCADE;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_ProductInventories_Products_ProductId'
+    ) THEN
+        ALTER TABLE "ProductInventories" 
+        ADD CONSTRAINT "FK_ProductInventories_Products_ProductId" 
+        FOREIGN KEY ("ProductId") REFERENCES "Products" ("Id") ON DELETE CASCADE;
+    END IF;
+END $$;
 
-ALTER TABLE "ProductInventories" 
-ADD CONSTRAINT IF NOT EXISTS "FK_ProductInventories_Warehouses_WarehouseId" 
-FOREIGN KEY ("WarehouseId") REFERENCES "Warehouses" ("Id") ON DELETE CASCADE;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_ProductInventories_Warehouses_WarehouseId'
+    ) THEN
+        ALTER TABLE "ProductInventories" 
+        ADD CONSTRAINT "FK_ProductInventories_Warehouses_WarehouseId" 
+        FOREIGN KEY ("WarehouseId") REFERENCES "Warehouses" ("Id") ON DELETE CASCADE;
+    END IF;
+END $$;
 
 -- ProductMovements foreign keys
-ALTER TABLE "ProductMovements" 
-ADD CONSTRAINT IF NOT EXISTS "FK_ProductMovements_Products_ProductId" 
-FOREIGN KEY ("ProductId") REFERENCES "Products" ("Id") ON DELETE RESTRICT;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_ProductMovements_Products_ProductId'
+    ) THEN
+        ALTER TABLE "ProductMovements" 
+        ADD CONSTRAINT "FK_ProductMovements_Products_ProductId" 
+        FOREIGN KEY ("ProductId") REFERENCES "Products" ("Id") ON DELETE RESTRICT;
+    END IF;
+END $$;
 
-ALTER TABLE "ProductMovements" 
-ADD CONSTRAINT IF NOT EXISTS "FK_ProductMovements_Warehouses_WarehouseId" 
-FOREIGN KEY ("WarehouseId") REFERENCES "Warehouses" ("Id") ON DELETE RESTRICT;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_ProductMovements_Warehouses_WarehouseId'
+    ) THEN
+        ALTER TABLE "ProductMovements" 
+        ADD CONSTRAINT "FK_ProductMovements_Warehouses_WarehouseId" 
+        FOREIGN KEY ("WarehouseId") REFERENCES "Warehouses" ("Id") ON DELETE RESTRICT;
+    END IF;
+END $$;
 
-ALTER TABLE "ProductMovements" 
-ADD CONSTRAINT IF NOT EXISTS "FK_ProductMovements_Users_CreatedByUserId" 
-FOREIGN KEY ("CreatedByUserId") REFERENCES "Users" ("Id") ON DELETE SET NULL;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_ProductMovements_Users_CreatedByUserId'
+    ) THEN
+        ALTER TABLE "ProductMovements" 
+        ADD CONSTRAINT "FK_ProductMovements_Users_CreatedByUserId" 
+        FOREIGN KEY ("CreatedByUserId") REFERENCES "Users" ("Id") ON DELETE SET NULL;
+    END IF;
+END $$;
 
 -- ProductMovementSummaries foreign keys
-ALTER TABLE "ProductMovementSummaries" 
-ADD CONSTRAINT IF NOT EXISTS "FK_ProductMovementSummaries_Products_ProductId" 
-FOREIGN KEY ("ProductId") REFERENCES "Products" ("Id") ON DELETE RESTRICT;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_ProductMovementSummaries_Products_ProductId'
+    ) THEN
+        ALTER TABLE "ProductMovementSummaries" 
+        ADD CONSTRAINT "FK_ProductMovementSummaries_Products_ProductId" 
+        FOREIGN KEY ("ProductId") REFERENCES "Products" ("Id") ON DELETE RESTRICT;
+    END IF;
+END $$;
 
-ALTER TABLE "ProductMovementSummaries" 
-ADD CONSTRAINT IF NOT EXISTS "FK_ProductMovementSummaries_Warehouses_WarehouseId" 
-FOREIGN KEY ("WarehouseId") REFERENCES "Warehouses" ("Id") ON DELETE RESTRICT;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_ProductMovementSummaries_Warehouses_WarehouseId'
+    ) THEN
+        ALTER TABLE "ProductMovementSummaries" 
+        ADD CONSTRAINT "FK_ProductMovementSummaries_Warehouses_WarehouseId" 
+        FOREIGN KEY ("WarehouseId") REFERENCES "Warehouses" ("Id") ON DELETE RESTRICT;
+    END IF;
+END $$;
 
 -- ProductAssemblies foreign keys
-ALTER TABLE "ProductAssemblies" 
-ADD CONSTRAINT IF NOT EXISTS "FK_ProductAssemblies_Users_CreatedByUserId" 
-FOREIGN KEY ("CreatedByUserId") REFERENCES "Users" ("Id") ON DELETE RESTRICT;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_ProductAssemblies_Users_CreatedByUserId'
+    ) THEN
+        ALTER TABLE "ProductAssemblies" 
+        ADD CONSTRAINT "FK_ProductAssemblies_Users_CreatedByUserId" 
+        FOREIGN KEY ("CreatedByUserId") REFERENCES "Users" ("Id") ON DELETE RESTRICT;
+    END IF;
+END $$;
 
-ALTER TABLE "ProductAssemblies" 
-ADD CONSTRAINT IF NOT EXISTS "FK_ProductAssemblies_Users_CompletedByUserId" 
-FOREIGN KEY ("CompletedByUserId") REFERENCES "Users" ("Id") ON DELETE SET NULL;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_ProductAssemblies_Users_CompletedByUserId'
+    ) THEN
+        ALTER TABLE "ProductAssemblies" 
+        ADD CONSTRAINT "FK_ProductAssemblies_Users_CompletedByUserId" 
+        FOREIGN KEY ("CompletedByUserId") REFERENCES "Users" ("Id") ON DELETE SET NULL;
+    END IF;
+END $$;
 
-ALTER TABLE "ProductAssemblies" 
-ADD CONSTRAINT IF NOT EXISTS "FK_ProductAssemblies_Warehouses_StoreId" 
-FOREIGN KEY ("StoreId") REFERENCES "Warehouses" ("Id") ON DELETE SET NULL;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_ProductAssemblies_Warehouses_StoreId'
+    ) THEN
+        ALTER TABLE "ProductAssemblies" 
+        ADD CONSTRAINT "FK_ProductAssemblies_Warehouses_StoreId" 
+        FOREIGN KEY ("StoreId") REFERENCES "Warehouses" ("Id") ON DELETE SET NULL;
+    END IF;
+END $$;
 
 -- BillOfMaterials foreign keys
-ALTER TABLE "BillOfMaterials" 
-ADD CONSTRAINT IF NOT EXISTS "FK_BillOfMaterials_ProductAssemblies_ProductAssemblyId" 
-FOREIGN KEY ("ProductAssemblyId") REFERENCES "ProductAssemblies" ("Id") ON DELETE CASCADE;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_BillOfMaterials_ProductAssemblies_ProductAssemblyId'
+    ) THEN
+        ALTER TABLE "BillOfMaterials" 
+        ADD CONSTRAINT "FK_BillOfMaterials_ProductAssemblies_ProductAssemblyId" 
+        FOREIGN KEY ("ProductAssemblyId") REFERENCES "ProductAssemblies" ("Id") ON DELETE CASCADE;
+    END IF;
+END $$;
 
-ALTER TABLE "BillOfMaterials" 
-ADD CONSTRAINT IF NOT EXISTS "FK_BillOfMaterials_Products_RawProductId" 
-FOREIGN KEY ("RawProductId") REFERENCES "Products" ("Id") ON DELETE RESTRICT;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_BillOfMaterials_Products_RawProductId'
+    ) THEN
+        ALTER TABLE "BillOfMaterials" 
+        ADD CONSTRAINT "FK_BillOfMaterials_Products_RawProductId" 
+        FOREIGN KEY ("RawProductId") REFERENCES "Products" ("Id") ON DELETE RESTRICT;
+    END IF;
+END $$;
 
-ALTER TABLE "BillOfMaterials" 
-ADD CONSTRAINT IF NOT EXISTS "FK_BillOfMaterials_Warehouses_WarehouseId" 
-FOREIGN KEY ("WarehouseId") REFERENCES "Warehouses" ("Id") ON DELETE RESTRICT;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_BillOfMaterials_Warehouses_WarehouseId'
+    ) THEN
+        ALTER TABLE "BillOfMaterials" 
+        ADD CONSTRAINT "FK_BillOfMaterials_Warehouses_WarehouseId" 
+        FOREIGN KEY ("WarehouseId") REFERENCES "Warehouses" ("Id") ON DELETE RESTRICT;
+    END IF;
+END $$;
 
 -- ProductRequests foreign keys
-ALTER TABLE "ProductRequests" 
-ADD CONSTRAINT IF NOT EXISTS "FK_ProductRequests_Users_RequestedByUserId" 
-FOREIGN KEY ("RequestedByUserId") REFERENCES "Users" ("Id") ON DELETE RESTRICT;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_ProductRequests_Users_RequestedByUserId'
+    ) THEN
+        ALTER TABLE "ProductRequests" 
+        ADD CONSTRAINT "FK_ProductRequests_Users_RequestedByUserId" 
+        FOREIGN KEY ("RequestedByUserId") REFERENCES "Users" ("Id") ON DELETE RESTRICT;
+    END IF;
+END $$;
 
-ALTER TABLE "ProductRequests" 
-ADD CONSTRAINT IF NOT EXISTS "FK_ProductRequests_Users_ApprovedByUserId" 
-FOREIGN KEY ("ApprovedByUserId") REFERENCES "Users" ("Id") ON DELETE SET NULL;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_ProductRequests_Users_ApprovedByUserId'
+    ) THEN
+        ALTER TABLE "ProductRequests" 
+        ADD CONSTRAINT "FK_ProductRequests_Users_ApprovedByUserId" 
+        FOREIGN KEY ("ApprovedByUserId") REFERENCES "Users" ("Id") ON DELETE SET NULL;
+    END IF;
+END $$;
 
-ALTER TABLE "ProductRequests" 
-ADD CONSTRAINT IF NOT EXISTS "FK_ProductRequests_Warehouses_WarehouseId" 
-FOREIGN KEY ("WarehouseId") REFERENCES "Warehouses" ("Id") ON DELETE RESTRICT;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_ProductRequests_Warehouses_WarehouseId'
+    ) THEN
+        ALTER TABLE "ProductRequests" 
+        ADD CONSTRAINT "FK_ProductRequests_Warehouses_WarehouseId" 
+        FOREIGN KEY ("WarehouseId") REFERENCES "Warehouses" ("Id") ON DELETE RESTRICT;
+    END IF;
+END $$;
 
 -- ProductRequestItems foreign keys
-ALTER TABLE "ProductRequestItems" 
-ADD CONSTRAINT IF NOT EXISTS "FK_ProductRequestItems_ProductRequests_ProductRequestId" 
-FOREIGN KEY ("ProductRequestId") REFERENCES "ProductRequests" ("Id") ON DELETE CASCADE;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_ProductRequestItems_ProductRequests_ProductRequestId'
+    ) THEN
+        ALTER TABLE "ProductRequestItems" 
+        ADD CONSTRAINT "FK_ProductRequestItems_ProductRequests_ProductRequestId" 
+        FOREIGN KEY ("ProductRequestId") REFERENCES "ProductRequests" ("Id") ON DELETE CASCADE;
+    END IF;
+END $$;
 
-ALTER TABLE "ProductRequestItems" 
-ADD CONSTRAINT IF NOT EXISTS "FK_ProductRequestItems_Products_ProductId" 
-FOREIGN KEY ("ProductId") REFERENCES "Products" ("Id") ON DELETE RESTRICT;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_ProductRequestItems_Products_ProductId'
+    ) THEN
+        ALTER TABLE "ProductRequestItems" 
+        ADD CONSTRAINT "FK_ProductRequestItems_Products_ProductId" 
+        FOREIGN KEY ("ProductId") REFERENCES "Products" ("Id") ON DELETE RESTRICT;
+    END IF;
+END $$;
 
 -- PurchaseOrders foreign keys
-ALTER TABLE "PurchaseOrders" 
-ADD CONSTRAINT IF NOT EXISTS "FK_PurchaseOrders_Users_CreatedByUserId" 
-FOREIGN KEY ("CreatedByUserId") REFERENCES "Users" ("Id") ON DELETE RESTRICT;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_PurchaseOrders_Users_CreatedByUserId'
+    ) THEN
+        ALTER TABLE "PurchaseOrders" 
+        ADD CONSTRAINT "FK_PurchaseOrders_Users_CreatedByUserId" 
+        FOREIGN KEY ("CreatedByUserId") REFERENCES "Users" ("Id") ON DELETE RESTRICT;
+    END IF;
+END $$;
 
-ALTER TABLE "PurchaseOrders" 
-ADD CONSTRAINT IF NOT EXISTS "FK_PurchaseOrders_Users_ApprovedByUserId" 
-FOREIGN KEY ("ApprovedByUserId") REFERENCES "Users" ("Id") ON DELETE SET NULL;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_PurchaseOrders_Users_ApprovedByUserId'
+    ) THEN
+        ALTER TABLE "PurchaseOrders" 
+        ADD CONSTRAINT "FK_PurchaseOrders_Users_ApprovedByUserId" 
+        FOREIGN KEY ("ApprovedByUserId") REFERENCES "Users" ("Id") ON DELETE SET NULL;
+    END IF;
+END $$;
 
 -- PurchaseItems foreign keys
-ALTER TABLE "PurchaseItems" 
-ADD CONSTRAINT IF NOT EXISTS "FK_PurchaseItems_PurchaseOrders_PurchaseOrderId" 
-FOREIGN KEY ("PurchaseOrderId") REFERENCES "PurchaseOrders" ("Id") ON DELETE CASCADE;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_PurchaseItems_PurchaseOrders_PurchaseOrderId'
+    ) THEN
+        ALTER TABLE "PurchaseItems" 
+        ADD CONSTRAINT "FK_PurchaseItems_PurchaseOrders_PurchaseOrderId" 
+        FOREIGN KEY ("PurchaseOrderId") REFERENCES "PurchaseOrders" ("Id") ON DELETE CASCADE;
+    END IF;
+END $$;
 
-ALTER TABLE "PurchaseItems" 
-ADD CONSTRAINT IF NOT EXISTS "FK_PurchaseItems_Products_ProductId" 
-FOREIGN KEY ("ProductId") REFERENCES "Products" ("Id") ON DELETE RESTRICT;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_PurchaseItems_Products_ProductId'
+    ) THEN
+        ALTER TABLE "PurchaseItems" 
+        ADD CONSTRAINT "FK_PurchaseItems_Products_ProductId" 
+        FOREIGN KEY ("ProductId") REFERENCES "Products" ("Id") ON DELETE RESTRICT;
+    END IF;
+END $$;
 
-ALTER TABLE "PurchaseItems" 
-ADD CONSTRAINT IF NOT EXISTS "FK_PurchaseItems_Warehouses_WarehouseId" 
-FOREIGN KEY ("WarehouseId") REFERENCES "Warehouses" ("Id") ON DELETE RESTRICT;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_PurchaseItems_Warehouses_WarehouseId'
+    ) THEN
+        ALTER TABLE "PurchaseItems" 
+        ADD CONSTRAINT "FK_PurchaseItems_Warehouses_WarehouseId" 
+        FOREIGN KEY ("WarehouseId") REFERENCES "Warehouses" ("Id") ON DELETE RESTRICT;
+    END IF;
+END $$;
 
 -- SalesOrders foreign keys
-ALTER TABLE "SalesOrders" 
-ADD CONSTRAINT IF NOT EXISTS "FK_SalesOrders_Customers_CustomerId" 
-FOREIGN KEY ("CustomerId") REFERENCES "Customers" ("Id") ON DELETE SET NULL;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_SalesOrders_Customers_CustomerId'
+    ) THEN
+        ALTER TABLE "SalesOrders" 
+        ADD CONSTRAINT "FK_SalesOrders_Customers_CustomerId" 
+        FOREIGN KEY ("CustomerId") REFERENCES "Customers" ("Id") ON DELETE SET NULL;
+    END IF;
+END $$;
 
-ALTER TABLE "SalesOrders" 
-ADD CONSTRAINT IF NOT EXISTS "FK_SalesOrders_Users_CreatedByUserId" 
-FOREIGN KEY ("CreatedByUserId") REFERENCES "Users" ("Id") ON DELETE RESTRICT;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_SalesOrders_Users_CreatedByUserId'
+    ) THEN
+        ALTER TABLE "SalesOrders" 
+        ADD CONSTRAINT "FK_SalesOrders_Users_CreatedByUserId" 
+        FOREIGN KEY ("CreatedByUserId") REFERENCES "Users" ("Id") ON DELETE RESTRICT;
+    END IF;
+END $$;
 
-ALTER TABLE "SalesOrders" 
-ADD CONSTRAINT IF NOT EXISTS "FK_SalesOrders_Users_ConfirmedByUserId" 
-FOREIGN KEY ("ConfirmedByUserId") REFERENCES "Users" ("Id") ON DELETE SET NULL;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_SalesOrders_Users_ConfirmedByUserId'
+    ) THEN
+        ALTER TABLE "SalesOrders" 
+        ADD CONSTRAINT "FK_SalesOrders_Users_ConfirmedByUserId" 
+        FOREIGN KEY ("ConfirmedByUserId") REFERENCES "Users" ("Id") ON DELETE SET NULL;
+    END IF;
+END $$;
 
 -- SalesItems foreign keys
-ALTER TABLE "SalesItems" 
-ADD CONSTRAINT IF NOT EXISTS "FK_SalesItems_SalesOrders_SalesOrderId" 
-FOREIGN KEY ("SalesOrderId") REFERENCES "SalesOrders" ("Id") ON DELETE CASCADE;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_SalesItems_SalesOrders_SalesOrderId'
+    ) THEN
+        ALTER TABLE "SalesItems" 
+        ADD CONSTRAINT "FK_SalesItems_SalesOrders_SalesOrderId" 
+        FOREIGN KEY ("SalesOrderId") REFERENCES "SalesOrders" ("Id") ON DELETE CASCADE;
+    END IF;
+END $$;
 
-ALTER TABLE "SalesItems" 
-ADD CONSTRAINT IF NOT EXISTS "FK_SalesItems_Products_ProductId" 
-FOREIGN KEY ("ProductId") REFERENCES "Products" ("Id") ON DELETE RESTRICT;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_SalesItems_Products_ProductId'
+    ) THEN
+        ALTER TABLE "SalesItems" 
+        ADD CONSTRAINT "FK_SalesItems_Products_ProductId" 
+        FOREIGN KEY ("ProductId") REFERENCES "Products" ("Id") ON DELETE RESTRICT;
+    END IF;
+END $$;
 
-ALTER TABLE "SalesItems" 
-ADD CONSTRAINT IF NOT EXISTS "FK_SalesItems_Warehouses_WarehouseId" 
-FOREIGN KEY ("WarehouseId") REFERENCES "Warehouses" ("Id") ON DELETE RESTRICT;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_SalesItems_Warehouses_WarehouseId'
+    ) THEN
+        ALTER TABLE "SalesItems" 
+        ADD CONSTRAINT "FK_SalesItems_Warehouses_WarehouseId" 
+        FOREIGN KEY ("WarehouseId") REFERENCES "Warehouses" ("Id") ON DELETE RESTRICT;
+    END IF;
+END $$;
 
 -- ShoppingCarts foreign keys
-ALTER TABLE "ShoppingCarts" 
-ADD CONSTRAINT IF NOT EXISTS "FK_ShoppingCarts_Users_UserId" 
-FOREIGN KEY ("UserId") REFERENCES "Users" ("Id") ON DELETE CASCADE;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_ShoppingCarts_Users_UserId'
+    ) THEN
+        ALTER TABLE "ShoppingCarts" 
+        ADD CONSTRAINT "FK_ShoppingCarts_Users_UserId" 
+        FOREIGN KEY ("UserId") REFERENCES "Users" ("Id") ON DELETE CASCADE;
+    END IF;
+END $$;
 
-ALTER TABLE "ShoppingCarts" 
-ADD CONSTRAINT IF NOT EXISTS "FK_ShoppingCarts_Products_ProductId" 
-FOREIGN KEY ("ProductId") REFERENCES "Products" ("Id") ON DELETE CASCADE;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_ShoppingCarts_Products_ProductId'
+    ) THEN
+        ALTER TABLE "ShoppingCarts" 
+        ADD CONSTRAINT "FK_ShoppingCarts_Products_ProductId" 
+        FOREIGN KEY ("ProductId") REFERENCES "Products" ("Id") ON DELETE CASCADE;
+    END IF;
+END $$;
 
 -- OrderTrackings foreign keys
-ALTER TABLE "OrderTrackings" 
-ADD CONSTRAINT IF NOT EXISTS "FK_OrderTrackings_SalesOrders_OrderId" 
-FOREIGN KEY ("OrderId") REFERENCES "SalesOrders" ("Id") ON DELETE CASCADE;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_OrderTrackings_SalesOrders_OrderId'
+    ) THEN
+        ALTER TABLE "OrderTrackings" 
+        ADD CONSTRAINT "FK_OrderTrackings_SalesOrders_OrderId" 
+        FOREIGN KEY ("OrderId") REFERENCES "SalesOrders" ("Id") ON DELETE CASCADE;
+    END IF;
+END $$;
 
-ALTER TABLE "OrderTrackings" 
-ADD CONSTRAINT IF NOT EXISTS "FK_OrderTrackings_Users_UpdatedByUserId" 
-FOREIGN KEY ("UpdatedByUserId") REFERENCES "Users" ("Id") ON DELETE SET NULL;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_OrderTrackings_Users_UpdatedByUserId'
+    ) THEN
+        ALTER TABLE "OrderTrackings" 
+        ADD CONSTRAINT "FK_OrderTrackings_Users_UpdatedByUserId" 
+        FOREIGN KEY ("UpdatedByUserId") REFERENCES "Users" ("Id") ON DELETE SET NULL;
+    END IF;
+END $$;
 
 -- ============================================
 -- Script Complete
@@ -572,4 +847,3 @@ FOREIGN KEY ("UpdatedByUserId") REFERENCES "Users" ("Id") ON DELETE SET NULL;
 -- After running this script, your database schema will be ready
 -- The application will automatically seed initial data on startup
 -- ============================================
-
