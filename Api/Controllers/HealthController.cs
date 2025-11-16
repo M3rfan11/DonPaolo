@@ -37,18 +37,20 @@ public class HealthController : ControllerBase
     [HttpGet("detailed")]
     public async Task<IActionResult> GetDetailed()
     {
+        var databaseCheck = await CheckDatabaseAsync();
+        
         var health = new
         {
-            status = "healthy",
+            status = databaseCheck.Status == "healthy" ? "healthy" : "unhealthy",
             timestamp = DateTime.UtcNow,
             service = "donpaolo-api",
             checks = new
             {
-                database = await CheckDatabaseAsync()
+                database = databaseCheck
             }
         };
 
-        var isHealthy = health.checks.database.status == "healthy";
+        var isHealthy = databaseCheck.Status == "healthy";
         return isHealthy ? Ok(health) : StatusCode(503, health);
     }
 
@@ -114,18 +116,18 @@ public class HealthController : ControllerBase
         }
     }
 
-    private async Task<object> CheckDatabaseAsync()
+    private async Task<DatabaseHealthCheck> CheckDatabaseAsync()
     {
         try
         {
             var canConnect = await _context.Database.CanConnectAsync();
             if (!canConnect)
             {
-                return new
+                return new DatabaseHealthCheck
                 {
-                    status = "unhealthy",
-                    message = "Cannot connect to database",
-                    suggestions = new[]
+                    Status = "unhealthy",
+                    Message = "Cannot connect to database",
+                    Suggestions = new[]
                     {
                         "Check connection string configuration",
                         "Verify database server is running",
@@ -137,20 +139,20 @@ public class HealthController : ControllerBase
             // Try a simple query
             await _context.Database.ExecuteSqlRawAsync("SELECT 1");
             
-            return new
+            return new DatabaseHealthCheck
             {
-                status = "healthy",
-                message = "Database connection successful"
+                Status = "healthy",
+                Message = "Database connection successful"
             };
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Database health check failed");
-            return new
+            return new DatabaseHealthCheck
             {
-                status = "unhealthy",
-                message = ex.Message,
-                suggestions = new[]
+                Status = "unhealthy",
+                Message = ex.Message,
+                Suggestions = new[]
                 {
                     "Check database connection string",
                     "Verify database server is accessible",
@@ -158,6 +160,13 @@ public class HealthController : ControllerBase
                 }
             };
         }
+    }
+
+    private class DatabaseHealthCheck
+    {
+        public string Status { get; set; } = string.Empty;
+        public string Message { get; set; } = string.Empty;
+        public string[]? Suggestions { get; set; }
     }
 
     private string[] GetSuggestions(bool canConnect, bool hasPendingMigrations, bool queryFailed)
