@@ -16,18 +16,20 @@ builder.Services.AddSwaggerGen();
 
 // Database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-  if (builder.Environment.IsProduction())
 {
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
-}
-else
-{
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection"), sqliteOptions =>
+    if (builder.Environment.IsProduction())
     {
-        sqliteOptions.CommandTimeout(30);
-    });
-}
-           .ConfigureWarnings(warnings => warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
+        options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
+    }
+    else
+    {
+        options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection"), sqliteOptions =>
+        {
+            sqliteOptions.CommandTimeout(30);
+        })
+        .ConfigureWarnings(warnings => warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+    }
+});
 
 // Authentication & Authorization
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
