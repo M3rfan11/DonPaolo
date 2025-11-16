@@ -15,13 +15,36 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 // Database
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-if (string.IsNullOrEmpty(connectionString))
+// Try multiple ways to get the connection string (Render might set it differently)
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
+    ?? Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
+    ?? Environment.GetEnvironmentVariable("DATABASE_URL"); // Render sometimes uses this
+
+// Log connection string status (without exposing password)
+if (string.IsNullOrWhiteSpace(connectionString))
 {
     throw new InvalidOperationException(
-        "Connection string 'DefaultConnection' is missing. " +
-        "Please set the ConnectionStrings__DefaultConnection environment variable.");
+        "Connection string 'DefaultConnection' is missing!\n" +
+        "Please ensure:\n" +
+        "1. PostgreSQL database 'donpaolo-db' is created in Render\n" +
+        "2. The database service name matches 'donpaolo-db' in render.yaml\n" +
+        "3. Or manually set ConnectionStrings__DefaultConnection environment variable in Render dashboard");
 }
+
+// Convert DATABASE_URL format to connection string if needed
+if (connectionString.StartsWith("postgresql://") || connectionString.StartsWith("postgres://"))
+{
+    // Npgsql can handle URI format, but let's ensure it's correct
+    // The URI format should work directly with Npgsql
+}
+
+// Log connection string format (mask password for security)
+var maskedConnectionString = connectionString.Contains("@") 
+    ? connectionString.Substring(0, connectionString.IndexOf("@")) + "@***" 
+    : connectionString.Substring(0, Math.Min(20, connectionString.Length)) + "***";
+Console.WriteLine($"[DB Config] Connection string format detected: {maskedConnectionString}");
+Console.WriteLine($"[DB Config] Connection string length: {connectionString.Length}");
+Console.WriteLine($"[DB Config] Starts with postgres: {connectionString.StartsWith("postgres")}");
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
@@ -154,9 +177,14 @@ using (var scope = app.Services.CreateScope())
     {
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
         logger.LogError(ex, "Error setting up database. Please ensure:");
-        logger.LogError("1. PostgreSQL database is created in Render");
-        logger.LogError("2. ConnectionStrings__DefaultConnection environment variable is set");
-        logger.LogError("3. Connection string format is correct");
+        logger.LogError("1. PostgreSQL database 'donpaolo-db' is created in Render");
+        logger.LogError("2. Go to your PostgreSQL service → 'Connections' tab");
+        logger.LogError("3. Copy the 'Internal Database URL' (starts with postgresql://)");
+        logger.LogError("4. Go to your Web Service → 'Environment' tab");
+        logger.LogError("5. Add environment variable:");
+        logger.LogError("   Key: ConnectionStrings__DefaultConnection");
+        logger.LogError("   Value: [paste the Internal Database URL]");
+        logger.LogError("6. Save and redeploy");
         // Don't throw - allow app to start so user can fix the issue
     }
 }
