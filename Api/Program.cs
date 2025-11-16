@@ -15,15 +15,23 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 // Database
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrEmpty(connectionString))
+{
+    throw new InvalidOperationException(
+        "Connection string 'DefaultConnection' is missing. " +
+        "Please set the ConnectionStrings__DefaultConnection environment variable.");
+}
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
     if (builder.Environment.IsProduction())
     {
-        options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
+        options.UseNpgsql(connectionString);
     }
     else
     {
-        options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection"), sqliteOptions =>
+        options.UseSqlite(connectionString, sqliteOptions =>
         {
             sqliteOptions.CommandTimeout(30);
         })
@@ -117,12 +125,40 @@ app.MapControllers();
 // Ensure database is migrated and seeded
 using (var scope = app.Services.CreateScope())
 {
-    var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    
-    context.Database.Migrate();
-    await SeedRoles.SeedAsync(context);
-    await SeedUsers.SeedAsync(context);
-    await SeedProducts.SeedAsync(context);
+    try
+    {
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        
+        logger.LogInformation("Attempting to connect to database...");
+        
+        // Test database connection
+        if (await context.Database.CanConnectAsync())
+        {
+            logger.LogInformation("Database connection successful. Running migrations...");
+            context.Database.Migrate();
+            
+            logger.LogInformation("Seeding database...");
+            await SeedRoles.SeedAsync(context);
+            await SeedUsers.SeedAsync(context);
+            await SeedProducts.SeedAsync(context);
+            
+            logger.LogInformation("Database setup completed successfully.");
+        }
+        else
+        {
+            logger.LogWarning("Cannot connect to database. Please check your connection string.");
+        }
+    }
+    catch (Exception ex)
+    {
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Error setting up database. Please ensure:");
+        logger.LogError("1. PostgreSQL database is created in Render");
+        logger.LogError("2. ConnectionStrings__DefaultConnection environment variable is set");
+        logger.LogError("3. Connection string format is correct");
+        // Don't throw - allow app to start so user can fix the issue
+    }
 }
 
 app.Run();
