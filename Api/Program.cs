@@ -157,6 +157,9 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseCors(builder.Environment.IsDevelopment() ? "AllowAll" : "AllowFrontend");
 
+// Global exception handler - must be early in pipeline
+app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
+
 // Custom middleware
 app.UseMiddleware<AuditMiddleware>();
 
@@ -187,28 +190,75 @@ using (var scope = app.Services.CreateScope())
             }
             catch (Exception migrationEx)
             {
+                // Log detailed migration error
+                logger.LogError(migrationEx, "Migration failed. Error: {ErrorMessage}", migrationEx.Message);
+                
+                // Extract inner exception details if available
+                if (migrationEx.InnerException != null)
+                {
+                    logger.LogError("Inner exception: {InnerMessage}", migrationEx.InnerException.Message);
+                    
+                    // Check for specific PostgreSQL errors
+                    if (migrationEx.InnerException.Message.Contains("null value in column"))
+                    {
+                        logger.LogError("IDENTITY COLUMN ISSUE DETECTED:");
+                        logger.LogError("The Id columns may not be configured as identity columns.");
+                        logger.LogError("Solution: Ensure the FixPostgreSQLIdentityColumns migration has run.");
+                    }
+                }
+                
                 // If migration fails due to data insertion issues (e.g., DateTime casting),
                 // log the error but continue - seed methods will handle data insertion
-                logger.LogWarning(migrationEx, "Migration encountered an error (likely data insertion). Continuing with seed methods...");
-                logger.LogInformation("Attempting to ensure database schema is created...");
+                logger.LogWarning("Continuing with seed methods despite migration error...");
                 
                 // Try to ensure database is created even if migration fails
                 try
                 {
                     await context.Database.EnsureCreatedAsync();
                 }
-                catch
+                catch (Exception ensureEx)
                 {
-                    // Ignore - database might already exist
+                    logger.LogWarning(ensureEx, "EnsureCreated also failed - database might already exist");
                 }
             }
             
             logger.LogInformation("Seeding database...");
-            await SeedRoles.SeedAsync(context);
-            await SeedUsers.SeedAsync(context);
-            await SeedProducts.SeedAsync(context);
             
-            logger.LogInformation("Database setup completed successfully.");
+            try
+            {
+                await SeedRoles.SeedAsync(context);
+                logger.LogInformation("Roles seeded successfully");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to seed roles. Error: {ErrorMessage}", ex.Message);
+                if (ex.InnerException != null)
+                {
+                    logger.LogError("Inner exception: {InnerMessage}", ex.InnerException.Message);
+                }
+            }
+            
+            try
+            {
+                await SeedUsers.SeedAsync(context);
+                logger.LogInformation("Users seeded successfully");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to seed users. Error: {ErrorMessage}", ex.Message);
+            }
+            
+            try
+            {
+                await SeedProducts.SeedAsync(context);
+                logger.LogInformation("Products seeded successfully");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to seed products. Error: {ErrorMessage}", ex.Message);
+            }
+            
+            logger.LogInformation("Database setup completed (with possible warnings above).");
         }
         else
         {
