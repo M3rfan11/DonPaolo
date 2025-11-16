@@ -1,7 +1,7 @@
 services:
   - type: web
     name: donpaolo-api
-    env: dotnet
+    # Runtime auto-detected from .csproj file (no need to specify)
     plan: free  # Change to 'starter' ($7/month) for production - always-on service
     region: oregon  # Options: oregon, frankfurt, singapore, mumbai (choose closest to users)
     buildCommand: cd Api && dotnet restore && dotnet publish -c Release -o ./publish
