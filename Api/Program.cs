@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Net;
+using System.Net.Sockets;
 using Api.Data;
 using Api.Services;
 using Api.Middleware;
@@ -68,10 +70,51 @@ if (connectionString.StartsWith("postgresql://") || connectionString.StartsWith(
             }
         }
         
+        // CRITICAL FIX: Resolve hostname to IPv4 address to avoid IPv6 connectivity issues
+        // Render's network environment may not support IPv6, so we force IPv4 resolution
+        string resolvedHost = host;
+        try
+        {
+            Console.WriteLine($"[DB Config] Resolving hostname '{host}' to IPv4 address...");
+            var hostEntry = Dns.GetHostEntry(host);
+            
+            // Find the first IPv4 address
+            var ipv4Address = hostEntry.AddressList
+                .FirstOrDefault(ip => ip.AddressFamily == AddressFamily.InterNetwork);
+            
+            if (ipv4Address != null)
+            {
+                resolvedHost = ipv4Address.ToString();
+                Console.WriteLine($"[DB Config] Resolved '{host}' to IPv4: {resolvedHost}");
+            }
+            else
+            {
+                Console.WriteLine($"[DB Config] WARNING: No IPv4 address found for '{host}'. Using hostname (may cause IPv6 issues).");
+                // If no IPv4 found, try to use the hostname but add IPv4 preference
+                resolvedHost = host;
+            }
+        }
+        catch (Exception dnsEx)
+        {
+            Console.WriteLine($"[DB Config] DNS resolution failed for '{host}': {dnsEx.Message}. Using hostname directly.");
+            // Continue with hostname - Npgsql might handle it
+            resolvedHost = host;
+        }
+        
         // Build standard Npgsql connection string
         // Include connection timeout and command timeout for better reliability
-        // Note: Supabase uses IPv6 by default, but Npgsql should handle this
-        connectionString = $"Host={host};Port={finalPort};Database={database};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true;Include Error Detail=true;Timeout=30;Command Timeout=30";
+        // Force IPv4 by using resolved IP address instead of hostname
+        // Note: When using IP address, SSL certificate validation uses the hostname parameter
+        connectionString = $"Host={resolvedHost};Port={finalPort};Database={database};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true;Include Error Detail=true;Timeout=30;Command Timeout=30";
+        
+        // If we resolved to an IP address, add the original hostname for SSL certificate validation
+        // (though Trust Server Certificate=true should handle this, it's good practice)
+        if (resolvedHost != host && IPAddress.TryParse(resolvedHost, out _))
+        {
+            // Add Server Name Indication (SNI) for SSL - Npgsql uses Host parameter for this
+            // But since we're using IP, we'll keep Trust Server Certificate=true which bypasses validation
+            Console.WriteLine($"[DB Config] Using IP address {resolvedHost} (original hostname: {host})");
+        }
         
         // For Supabase, add additional connection parameters
         if (isSupabase)
@@ -79,7 +122,7 @@ if (connectionString.StartsWith("postgresql://") || connectionString.StartsWith(
             connectionString += ";No Reset On Close=true;Keepalive=30";
         }
         
-        Console.WriteLine($"[DB Config] Converted URI to standard connection string format (port: {finalPort})");
+        Console.WriteLine($"[DB Config] Converted URI to standard connection string format (port: {finalPort}, host: {resolvedHost})");
     }
     catch (Exception ex)
     {
