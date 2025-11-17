@@ -50,7 +50,27 @@ const Login: React.FC = () => {
       navigate('/'); // Redirect to dashboard after successful login
     } catch (err: any) {
       console.error('Login failed:', err);
-      setError(err.response?.data?.message || 'Login failed');
+      console.error('Error details:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+        statusText: err.response?.statusText,
+        config: err.config
+      });
+      
+      // Show more specific error messages
+      let errorMessage = 'An error occurred during login';
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      } else if (err.response?.status === 401) {
+        errorMessage = 'Invalid email or password';
+      } else if (err.response?.status === 0 || err.code === 'ERR_NETWORK') {
+        errorMessage = 'Network error: Could not connect to server. Please check your connection.';
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
