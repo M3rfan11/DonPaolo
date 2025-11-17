@@ -64,6 +64,7 @@ if (string.IsNullOrWhiteSpace(connectionString))
 }
 
 // Convert PostgreSQL URI format to standard connection string if needed
+// Also normalize connection string formats (User Id -> Username, Server -> Host)
 if (connectionString.StartsWith("postgresql://") || connectionString.StartsWith("postgres://"))
 {
     try
@@ -107,64 +108,75 @@ if (connectionString.StartsWith("postgresql://") || connectionString.StartsWith(
             }
         }
         
-        // Resolve hostname to IPv4 address to avoid IPv6 connectivity issues
-        // Render's network environment may not support IPv6, so we MUST use IPv4
-        // Try multiple DNS resolution methods to find IPv4
+        // For SSL connections (especially pooler), use hostname for proper certificate validation
+        // IP addresses bypass SSL certificate validation which can cause connection failures
         string connectionHost = host;
         string ipv4AddressStr = null;
+        bool isPooler = host.Contains("pooler.supabase.com");
         
-        try
+        // For pooler connections, always use hostname for SSL certificate validation
+        if (isPooler)
         {
-            Console.WriteLine($"[DB Config] Resolving hostname '{host}' to IPv4 address...");
-            
-            // Try GetHostEntry first (most common)
-            var hostEntry = Dns.GetHostEntry(host);
-            Console.WriteLine($"[DB Config] DNS returned {hostEntry.AddressList.Length} address(es)");
-            
-            // Log all addresses for debugging
-            foreach (var addr in hostEntry.AddressList)
+            Console.WriteLine($"[DB Config] Using pooler connection - keeping hostname '{host}' for SSL certificate validation");
+            connectionHost = host;
+        }
+        else
+        {
+            // For direct connections, try to resolve to IPv4 to avoid IPv6 issues
+            // Render's network environment may not support IPv6, so we try to use IPv4
+            try
             {
-                Console.WriteLine($"[DB Config] Found address: {addr} (Family: {addr.AddressFamily})");
-            }
-            
-            // Find the first IPv4 address
-            var ipv4Address = hostEntry.AddressList
-                .FirstOrDefault(ip => ip.AddressFamily == AddressFamily.InterNetwork);
-            
-            if (ipv4Address != null)
-            {
-                ipv4AddressStr = ipv4Address.ToString();
-                connectionHost = ipv4AddressStr;
-                Console.WriteLine($"[DB Config] ✅ Resolved '{host}' to IPv4: {ipv4AddressStr}");
-            }
-            else
-            {
-                // Try GetHostAddresses as fallback
-                Console.WriteLine($"[DB Config] No IPv4 in GetHostEntry, trying GetHostAddresses...");
-                var addresses = Dns.GetHostAddresses(host);
-                var ipv4FromAddresses = addresses.FirstOrDefault(ip => ip.AddressFamily == AddressFamily.InterNetwork);
+                Console.WriteLine($"[DB Config] Resolving hostname '{host}' to IPv4 address...");
                 
-                if (ipv4FromAddresses != null)
+                // Try GetHostEntry first (most common)
+                var hostEntry = Dns.GetHostEntry(host);
+                Console.WriteLine($"[DB Config] DNS returned {hostEntry.AddressList.Length} address(es)");
+                
+                // Log all addresses for debugging
+                foreach (var addr in hostEntry.AddressList)
                 {
-                    ipv4AddressStr = ipv4FromAddresses.ToString();
+                    Console.WriteLine($"[DB Config] Found address: {addr} (Family: {addr.AddressFamily})");
+                }
+                
+                // Find the first IPv4 address
+                var ipv4Address = hostEntry.AddressList
+                    .FirstOrDefault(ip => ip.AddressFamily == AddressFamily.InterNetwork);
+                
+                if (ipv4Address != null)
+                {
+                    ipv4AddressStr = ipv4Address.ToString();
                     connectionHost = ipv4AddressStr;
-                    Console.WriteLine($"[DB Config] ✅ Found IPv4 via GetHostAddresses: {ipv4AddressStr}");
+                    Console.WriteLine($"[DB Config] ✅ Resolved '{host}' to IPv4: {ipv4AddressStr}");
                 }
                 else
                 {
-                    Console.WriteLine($"[DB Config] ⚠️ WARNING: No IPv4 address found for '{host}'");
-                    Console.WriteLine($"[DB Config] ⚠️ This will likely cause connection failures on Render");
-                    Console.WriteLine($"[DB Config] ⚠️ SOLUTION: Use Supabase connection pooler or check Supabase network settings");
-                    // Still use hostname, but this will likely fail
-                    connectionHost = host;
+                    // Try GetHostAddresses as fallback
+                    Console.WriteLine($"[DB Config] No IPv4 in GetHostEntry, trying GetHostAddresses...");
+                    var addresses = Dns.GetHostAddresses(host);
+                    var ipv4FromAddresses = addresses.FirstOrDefault(ip => ip.AddressFamily == AddressFamily.InterNetwork);
+                    
+                    if (ipv4FromAddresses != null)
+                    {
+                        ipv4AddressStr = ipv4FromAddresses.ToString();
+                        connectionHost = ipv4AddressStr;
+                        Console.WriteLine($"[DB Config] ✅ Found IPv4 via GetHostAddresses: {ipv4AddressStr}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[DB Config] ⚠️ WARNING: No IPv4 address found for '{host}'");
+                        Console.WriteLine($"[DB Config] ⚠️ This will likely cause connection failures on Render");
+                        Console.WriteLine($"[DB Config] ⚠️ SOLUTION: Use Supabase connection pooler or check Supabase network settings");
+                        // Still use hostname, but this will likely fail
+                        connectionHost = host;
+                    }
                 }
             }
-        }
-        catch (Exception dnsEx)
-        {
-            Console.WriteLine($"[DB Config] ❌ DNS resolution failed for '{host}': {dnsEx.Message}");
-            Console.WriteLine($"[DB Config] ⚠️ This will likely cause connection failures");
-            connectionHost = host;
+            catch (Exception dnsEx)
+            {
+                Console.WriteLine($"[DB Config] ❌ DNS resolution failed for '{host}': {dnsEx.Message}");
+                Console.WriteLine($"[DB Config] ⚠️ This will likely cause connection failures");
+                connectionHost = host;
+            }
         }
         
         // Build standard Npgsql connection string
@@ -175,20 +187,29 @@ if (connectionString.StartsWith("postgresql://") || connectionString.StartsWith(
         // For Supabase, add additional connection parameters for better reliability
         if (isSupabase)
         {
+            // For pooler connections, ensure proper SSL settings
+            if (isPooler)
+            {
+                // Pooler connections require hostname for SSL certificate validation
+                // Keep SSL Mode=Require but ensure we're using hostname (not IP)
+                connectionString += ";Application Name=donpaolo-api";
+            }
+            
             // Add connection resilience parameters
             connectionString += ";No Reset On Close=true;Tcp Keepalive=true;Tcp Keepalive Time=30;Tcp Keepalive Interval=10;Tcp Keepalive Retry Count=3";
             
-            if (ipv4AddressStr != null)
+            if (isPooler)
+            {
+                Console.WriteLine($"[DB Config] ✅ Using pooler hostname '{host}' for SSL certificate validation");
+            }
+            else if (ipv4AddressStr != null)
             {
                 Console.WriteLine($"[DB Config] ✅ Using IPv4 address: {ipv4AddressStr} (original hostname: {host})");
             }
             else
             {
-                Console.WriteLine($"[DB Config] ❌ CRITICAL: No IPv4 address found - connection will likely fail!");
-                Console.WriteLine($"[DB Config] 💡 SOLUTION OPTIONS:");
-                Console.WriteLine($"[DB Config]    1. Use Supabase Connection Pooler (check Supabase dashboard)");
-                Console.WriteLine($"[DB Config]    2. Contact Supabase support about IPv4 availability");
-                Console.WriteLine($"[DB Config]    3. Check Supabase → Settings → Database → Network Restrictions");
+                Console.WriteLine($"[DB Config] ⚠️ WARNING: No IPv4 address found for direct connection");
+                Console.WriteLine($"[DB Config] 💡 SOLUTION: Use Supabase Connection Pooler (check Supabase dashboard)");
                 Console.WriteLine($"[DB Config] ⚠️  Attempting connection with hostname (may fail due to IPv6)");
             }
         }
@@ -199,6 +220,21 @@ if (connectionString.StartsWith("postgresql://") || connectionString.StartsWith(
     {
         Console.WriteLine($"[DB Config] Error converting URI format: {ex.Message}");
         // Continue with original connection string - Npgsql might handle it
+    }
+}
+else
+{
+    // Normalize connection string format (User Id -> Username, Server -> Host)
+    // Npgsql prefers Username and Host over User Id and Server
+    if (connectionString.Contains("User Id="))
+    {
+        connectionString = connectionString.Replace("User Id=", "Username=");
+        Console.WriteLine($"[DB Config] Normalized 'User Id' to 'Username'");
+    }
+    if (connectionString.Contains("Server="))
+    {
+        connectionString = connectionString.Replace("Server=", "Host=");
+        Console.WriteLine($"[DB Config] Normalized 'Server' to 'Host'");
     }
 }
 
@@ -212,7 +248,17 @@ Console.WriteLine($"[DB Config] Starts with postgres: {connectionString.StartsWi
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
-    if (builder.Environment.IsProduction())
+    // Detect PostgreSQL connection string (URI format or Npgsql format)
+    // Check for PostgreSQL indicators: URI format, Host=, Server=, or Username= with Host/Server
+    // Also check for pooler.supabase.com or supabase.co in hostname
+    bool isPostgreSQL = connectionString.StartsWith("postgresql://") 
+        || connectionString.StartsWith("postgres://")
+        || connectionString.Contains("Host=")
+        || connectionString.Contains("Server=")
+        || connectionString.Contains("pooler.supabase.com")
+        || connectionString.Contains(".supabase.co");
+    
+    if (isPostgreSQL)
     {
         options.UseNpgsql(connectionString, npgsqlOptions =>
         {
@@ -230,6 +276,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     }
     else
     {
+        // Use SQLite for local development when no PostgreSQL connection string is provided
         options.UseSqlite(connectionString, sqliteOptions =>
         {
             sqliteOptions.CommandTimeout(30);
@@ -351,12 +398,39 @@ using (var scope = app.Services.CreateScope())
             
             // Try to connect and catch any exceptions
             bool canConnect = false;
+            Exception connectionException = null;
             try
             {
                 canConnect = await context.Database.CanConnectAsync();
+                
+                // If CanConnectAsync returns false, try to open a connection to get the actual error
+                if (!canConnect)
+                {
+                    logger.LogWarning("CanConnectAsync returned false, attempting to open connection to get detailed error...");
+                    try
+                    {
+                        await context.Database.OpenConnectionAsync();
+                        canConnect = true;
+                        await context.Database.CloseConnectionAsync();
+                    }
+                    catch (Exception openEx)
+                    {
+                        connectionException = openEx;
+                        logger.LogError(openEx, "Exception during OpenConnectionAsync:");
+                        logger.LogError("Error Type: {Type}", openEx.GetType().Name);
+                        logger.LogError("Error Message: {Message}", openEx.Message);
+                        if (openEx.InnerException != null)
+                        {
+                            logger.LogError("Inner Exception: {InnerType} - {InnerMessage}", 
+                                openEx.InnerException.GetType().Name, 
+                                openEx.InnerException.Message);
+                        }
+                    }
+                }
             }
             catch (Exception connectEx)
             {
+                connectionException = connectEx;
                 logger.LogError(connectEx, "Exception during CanConnectAsync:");
                 logger.LogError("Error Type: {Type}", connectEx.GetType().Name);
                 logger.LogError("Error Message: {Message}", connectEx.Message);
@@ -366,7 +440,6 @@ using (var scope = app.Services.CreateScope())
                         connectEx.InnerException.GetType().Name, 
                         connectEx.InnerException.Message);
                 }
-                throw; // Re-throw to be caught by outer catch
             }
             
             if (canConnect)
@@ -489,12 +562,33 @@ using (var scope = app.Services.CreateScope())
             else
             {
                 logger.LogError("❌ Cannot connect to database. Connection test returned false.");
-                logger.LogError("This usually means:");
-                logger.LogError("  1. Database server is not reachable");
-                logger.LogError("  2. Network connectivity issues (IPv6/IPv4)");
-                logger.LogError("  3. Firewall blocking the connection");
-                logger.LogError("  4. Incorrect connection string");
+                if (connectionException != null)
+                {
+                    logger.LogError("Connection exception details:");
+                    logger.LogError("  Type: {Type}", connectionException.GetType().Name);
+                    logger.LogError("  Message: {Message}", connectionException.Message);
+                    if (connectionException.InnerException != null)
+                    {
+                        logger.LogError("  Inner Exception: {InnerType} - {InnerMessage}", 
+                            connectionException.InnerException.GetType().Name,
+                            connectionException.InnerException.Message);
+                    }
+                }
+                else
+                {
+                    logger.LogError("No exception thrown, but connection failed. This usually means:");
+                    logger.LogError("  1. Database server is not reachable");
+                    logger.LogError("  2. Network connectivity issues");
+                    logger.LogError("  3. Firewall blocking the connection");
+                    logger.LogError("  4. Incorrect connection string or credentials");
+                    logger.LogError("  5. SSL/TLS handshake failure");
+                }
                 logger.LogError("Check the logs above for DNS resolution details.");
+                // Re-throw the exception if we have one
+                if (connectionException != null)
+                {
+                    throw connectionException;
+                }
             }
         }
         catch (Exception connectionEx)
