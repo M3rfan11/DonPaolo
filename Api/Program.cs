@@ -211,7 +211,8 @@ if (connectionString.StartsWith("postgresql://") || connectionString.StartsWith(
         // If no IPv4 found, we'll still try hostname but connection will likely fail
         // Note: Removed Min/Max Pool Size as they're not supported in all Npgsql versions
         // Use basic connection parameters that work with all Npgsql versions
-        connectionString = $"Host={connectionHost};Port={finalPort};Database={database};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true;Include Error Detail=true;Timeout=60;Command Timeout=60";
+        // Increased timeout for initial connection to handle network latency
+        connectionString = $"Host={connectionHost};Port={finalPort};Database={database};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true;Include Error Detail=true;Timeout=120;Command Timeout=60;Connection Lifetime=0;Pooling=true";
         
         // For Supabase, add additional connection parameters for better reliability
         if (isSupabase)
@@ -292,9 +293,10 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
         options.UseNpgsql(connectionString, npgsqlOptions =>
         {
             // Enable retry on failure for transient errors (network issues, timeouts, etc.)
+            // Reduced retry count and increased delay to avoid overwhelming the connection pooler
             npgsqlOptions.EnableRetryOnFailure(
-                maxRetryCount: 5,                    // Retry up to 5 times
-                maxRetryDelay: TimeSpan.FromSeconds(30), // Max delay between retries
+                maxRetryCount: 3,                    // Retry up to 3 times (reduced from 5)
+                maxRetryDelay: TimeSpan.FromSeconds(10), // Max delay between retries (reduced from 30)
                 errorCodesToAdd: null                 // Retry on all transient errors
             );
             
