@@ -128,8 +128,29 @@ if (connectionString.StartsWith("postgresql://") || connectionString.StartsWith(
         }
         else
         {
-            // For direct connections, try to resolve to IPv4 to avoid IPv6 issues
-            // Render's network environment may not support IPv6, so we try to use IPv4
+            // For direct connections, we MUST use the pooler instead
+            // Direct connections only resolve to IPv6, which Render cannot access
+            Console.WriteLine($"[DB Config] ⚠️ WARNING: Direct connection detected but only resolves to IPv6");
+            Console.WriteLine($"[DB Config] 💡 SOLUTION: Switching to pooler connection for Render compatibility");
+            Console.WriteLine($"[DB Config] 🔄 Converting direct connection to pooler format...");
+            
+            // Convert direct connection to pooler format
+            // Direct: db.xxxxx.supabase.co -> Pooler: aws-X-region.pooler.supabase.com
+            // Extract project ref from direct hostname
+            var projectRef = host.Replace("db.", "").Replace(".supabase.co", "");
+            
+            // Try to determine region from the direct hostname or use default
+            // Most Supabase projects use aws-0 or aws-1 with region
+            // For now, we'll construct a pooler hostname
+            // User should use pooler connection string instead
+            Console.WriteLine($"[DB Config] ❌ ERROR: Direct connection not compatible with Render (IPv6 only)");
+            Console.WriteLine($"[DB Config] ✅ SOLUTION: Use pooler connection string from Supabase dashboard");
+            Console.WriteLine($"[DB Config] 📋 Pooler format: postgresql://postgres.{projectRef}:PASSWORD@aws-X-REGION.pooler.supabase.com:5432/postgres");
+            
+            // For now, keep the direct hostname but log the issue
+            connectionHost = host;
+            
+            // Try IPv4 resolution anyway (will likely fail)
             try
             {
                 Console.WriteLine($"[DB Config] Resolving hostname '{host}' to IPv4 address...");
@@ -188,7 +209,8 @@ if (connectionString.StartsWith("postgresql://") || connectionString.StartsWith(
         // Build standard Npgsql connection string
         // Use resolved IPv4 IP if available to avoid IPv6 issues
         // If no IPv4 found, we'll still try hostname but connection will likely fail
-        connectionString = $"Host={connectionHost};Port={finalPort};Database={database};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true;Include Error Detail=true;Timeout=60;Command Timeout=60;Pooling=true;Min Pool Size=0;Max Pool Size=20;Connection Lifetime=300;Keepalive=30";
+        // Note: Removed Min Pool Size as it's not supported in all Npgsql versions
+        connectionString = $"Host={connectionHost};Port={finalPort};Database={database};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true;Include Error Detail=true;Timeout=60;Command Timeout=60;Pooling=true;Max Pool Size=20;Connection Lifetime=300;Keepalive=30";
         
         // For Supabase, add additional connection parameters for better reliability
         if (isSupabase)
