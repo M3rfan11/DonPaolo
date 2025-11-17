@@ -174,171 +174,156 @@ public class POSController : ControllerBase
             // Generate sale number
             var saleNumber = await GenerateSaleNumber();
 
-            using var transaction = await _context.Database.BeginTransactionAsync();
-            try
+            // Handle customer lookup/registration
+            Customer? customer = null;
+            if (!string.IsNullOrEmpty(request.CustomerPhone))
             {
-                // Handle customer lookup/registration
-                Customer? customer = null;
-                if (!string.IsNullOrEmpty(request.CustomerPhone))
+                // Try to find existing customer in Customers table
+                customer = await _context.Customers
+                    .FirstOrDefaultAsync(c => c.PhoneNumber == request.CustomerPhone && c.IsActive);
+
+                // If not found in Customers table, check if they exist in sales orders
+                if (customer == null)
                 {
-                    // Try to find existing customer in Customers table
-                    customer = await _context.Customers
-                        .FirstOrDefaultAsync(c => c.PhoneNumber == request.CustomerPhone && c.IsActive);
+                    var existingSale = await _context.SalesOrders
+                        .Where(s => s.CustomerPhone == request.CustomerPhone)
+                        .OrderByDescending(s => s.CreatedAt)
+                        .FirstOrDefaultAsync();
 
-                    // If not found in Customers table, check if they exist in sales orders
-                    if (customer == null)
+                    if (existingSale != null)
                     {
-                        var existingSale = await _context.SalesOrders
-                            .Where(s => s.CustomerPhone == request.CustomerPhone)
-                            .OrderByDescending(s => s.CreatedAt)
-                            .FirstOrDefaultAsync();
-
-                        if (existingSale != null)
+                        // Customer exists in sales orders, register them in Customers table
+                        customer = new Customer
                         {
-                            // Customer exists in sales orders, register them in Customers table
-                            customer = new Customer
-                            {
-                                FullName = existingSale.CustomerName ?? request.CustomerName ?? "Unknown Customer",
-                                PhoneNumber = request.CustomerPhone,
-                                Email = existingSale.CustomerEmail ?? request.CustomerEmail,
-                                Address = existingSale.CustomerAddress ?? request.CustomerAddress,
-                                CreatedAt = existingSale.CreatedAt,
-                                IsActive = true
-                            };
+                            FullName = existingSale.CustomerName ?? request.CustomerName ?? "Unknown Customer",
+                            PhoneNumber = request.CustomerPhone,
+                            Email = existingSale.CustomerEmail ?? request.CustomerEmail,
+                            Address = existingSale.CustomerAddress ?? request.CustomerAddress,
+                            CreatedAt = existingSale.CreatedAt,
+                            IsActive = true
+                        };
 
-                            _context.Customers.Add(customer);
-                            await _context.SaveChangesAsync();
+                        _context.Customers.Add(customer);
+                        await _context.SaveChangesAsync();
 
-                            await _auditService.LogAsync("Customer", customer.Id.ToString(), "Created", 
-                                null, System.Text.Json.JsonSerializer.Serialize(customer), currentUserId);
-                        }
-                        else if (!string.IsNullOrEmpty(request.CustomerName))
+                        await _auditService.LogAsync("Customer", customer.Id.ToString(), "Created", 
+                            null, System.Text.Json.JsonSerializer.Serialize(customer), currentUserId);
+                    }
+                    else if (!string.IsNullOrEmpty(request.CustomerName))
+                    {
+                        // Completely new customer, register them
+                        customer = new Customer
                         {
-                            // Completely new customer, register them
-                            customer = new Customer
-                            {
-                                FullName = request.CustomerName,
-                                PhoneNumber = request.CustomerPhone,
-                                Email = request.CustomerEmail,
-                                CreatedAt = DateTime.UtcNow,
-                                IsActive = true
-                            };
+                            FullName = request.CustomerName,
+                            PhoneNumber = request.CustomerPhone,
+                            Email = request.CustomerEmail,
+                            CreatedAt = DateTime.UtcNow,
+                            IsActive = true
+                        };
 
-                            _context.Customers.Add(customer);
-                            await _context.SaveChangesAsync();
+                        _context.Customers.Add(customer);
+                        await _context.SaveChangesAsync();
 
-                            await _auditService.LogAsync("Customer", customer.Id.ToString(), "Created", 
-                                null, System.Text.Json.JsonSerializer.Serialize(customer), currentUserId);
-                        }
+                        await _auditService.LogAsync("Customer", customer.Id.ToString(), "Created", 
+                            null, System.Text.Json.JsonSerializer.Serialize(customer), currentUserId);
                     }
                 }
-
-                // Create sales order
-                var salesOrder = new SalesOrder
-                {
-                    OrderNumber = saleNumber,
-                    CustomerName = request.CustomerName ?? "Walk-in Customer",
-                    CustomerEmail = request.CustomerEmail,
-                    CustomerPhone = request.CustomerPhone,
-                    TotalAmount = request.FinalAmount,
-                    Status = "Completed",
-                    PaymentStatus = "Paid",
-                    Notes = request.Notes,
-                    CreatedByUserId = currentUserId,
-                    ConfirmedByUserId = currentUserId,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow,
-                    OrderDate = DateTime.UtcNow
-                };
-
-                _context.SalesOrders.Add(salesOrder);
-                await _context.SaveChangesAsync();
-
-                // Create sales order items (no inventory - simplified system)
-                var salesOrderItems = new List<SalesItem>();
-                foreach (var item in request.Items)
-                {
-                    // Verify product exists and is active
-                    var product = await _context.Products.FindAsync(item.ProductId);
-                    if (product == null || !product.IsActive)
-                    {
-                        await transaction.RollbackAsync();
-                        return BadRequest(new { Message = $"Product {item.ProductId} not found or inactive" });
-                    }
-
-                    // Create sales order item
-                    var salesOrderItem = new SalesItem
-                    {
-                        SalesOrderId = salesOrder.Id,
-                        ProductId = item.ProductId,
-                        WarehouseId = storeId,
-                        Quantity = item.Quantity,
-                        UnitPrice = item.UnitPrice,
-                        TotalPrice = item.TotalPrice,
-                        CreatedAt = DateTime.UtcNow
-                    };
-
-                    salesOrderItems.Add(salesOrderItem);
-                }
-
-                _context.SalesItems.AddRange(salesOrderItems);
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-
-                // Audit log
-                var auditData = new {
-                    Id = salesOrder.Id,
-                    OrderNumber = salesOrder.OrderNumber,
-                    CustomerName = salesOrder.CustomerName,
-                    TotalAmount = salesOrder.TotalAmount,
-                    Status = salesOrder.Status,
-                    PaymentStatus = salesOrder.PaymentStatus,
-                    CreatedByUserId = salesOrder.CreatedByUserId
-                };
-                await _auditService.LogAsync("SalesOrder", salesOrder.Id.ToString(), "CREATE", 
-                    null, JsonSerializer.Serialize(auditData), currentUserId);
-
-                // Update revenue tracking
-                await _revenueTrackingService.UpdateRevenueAfterSaleAsync(salesOrder.Id, salesOrder.TotalAmount);
-
-                // Create response
-                var response = new POSSaleResponse
-                {
-                    SaleNumber = salesOrder.OrderNumber,
-                    SaleId = salesOrder.Id,
-                    CustomerName = salesOrder.CustomerName,
-                    TotalAmount = request.TotalAmount,
-                    DiscountAmount = request.DiscountAmount ?? 0,
-                    TaxAmount = request.TaxAmount ?? 0,
-                    FinalAmount = request.FinalAmount,
-                    PaymentMethod = request.PaymentMethod,
-                    Items = salesOrderItems.Select(item => new POSItemResponse
-                    {
-                        ProductId = item.ProductId,
-                        ProductName = _context.Products.Find(item.ProductId)?.Name ?? "Unknown Product",
-                        Quantity = item.Quantity,
-                        UnitPrice = item.UnitPrice,
-                        TotalPrice = item.TotalPrice
-                    }).ToList(),
-                    SaleDate = salesOrder.CreatedAt,
-                    CashierName = currentUser.FullName,
-                    StoreName = _context.Warehouses.Find(storeId)?.Name ?? "Unknown Store"
-                };
-
-                return Ok(response);
             }
-            catch (Exception ex)
+
+            // Verify all products exist and are active before creating the order
+            foreach (var item in request.Items)
             {
-                try
+                var product = await _context.Products.FindAsync(item.ProductId);
+                if (product == null || !product.IsActive)
                 {
-                    await transaction.RollbackAsync();
+                    return BadRequest(new { Message = $"Product {item.ProductId} not found or inactive" });
                 }
-                catch (Exception rollbackEx)
-                {
-                    _logger.LogError(rollbackEx, "Error during transaction rollback");
-                }
-                throw ex;
             }
+
+            // Create sales order
+            var salesOrder = new SalesOrder
+            {
+                OrderNumber = saleNumber,
+                CustomerName = request.CustomerName ?? "Walk-in Customer",
+                CustomerEmail = request.CustomerEmail,
+                CustomerPhone = request.CustomerPhone,
+                TotalAmount = request.FinalAmount,
+                Status = "Completed",
+                PaymentStatus = "Paid",
+                Notes = request.Notes,
+                CreatedByUserId = currentUserId,
+                ConfirmedByUserId = currentUserId,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                OrderDate = DateTime.UtcNow
+            };
+
+            _context.SalesOrders.Add(salesOrder);
+            await _context.SaveChangesAsync();
+
+            // Create sales order items (no inventory - simplified system)
+            var salesOrderItems = new List<SalesItem>();
+            foreach (var item in request.Items)
+            {
+                // Create sales order item
+                var salesOrderItem = new SalesItem
+                {
+                    SalesOrderId = salesOrder.Id,
+                    ProductId = item.ProductId,
+                    WarehouseId = storeId,
+                    Quantity = item.Quantity,
+                    UnitPrice = item.UnitPrice,
+                    TotalPrice = item.TotalPrice,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                salesOrderItems.Add(salesOrderItem);
+            }
+
+            _context.SalesItems.AddRange(salesOrderItems);
+            await _context.SaveChangesAsync();
+
+            // Audit log
+            var auditData = new {
+                Id = salesOrder.Id,
+                OrderNumber = salesOrder.OrderNumber,
+                CustomerName = salesOrder.CustomerName,
+                TotalAmount = salesOrder.TotalAmount,
+                Status = salesOrder.Status,
+                PaymentStatus = salesOrder.PaymentStatus,
+                CreatedByUserId = salesOrder.CreatedByUserId
+            };
+            await _auditService.LogAsync("SalesOrder", salesOrder.Id.ToString(), "CREATE", 
+                null, JsonSerializer.Serialize(auditData), currentUserId);
+
+            // Update revenue tracking
+            await _revenueTrackingService.UpdateRevenueAfterSaleAsync(salesOrder.Id, salesOrder.TotalAmount);
+
+            // Create response
+            var response = new POSSaleResponse
+            {
+                SaleNumber = salesOrder.OrderNumber,
+                SaleId = salesOrder.Id,
+                CustomerName = salesOrder.CustomerName,
+                TotalAmount = request.TotalAmount,
+                DiscountAmount = request.DiscountAmount ?? 0,
+                TaxAmount = request.TaxAmount ?? 0,
+                FinalAmount = request.FinalAmount,
+                PaymentMethod = request.PaymentMethod,
+                Items = salesOrderItems.Select(item => new POSItemResponse
+                {
+                    ProductId = item.ProductId,
+                    ProductName = _context.Products.Find(item.ProductId)?.Name ?? "Unknown Product",
+                    Quantity = item.Quantity,
+                    UnitPrice = item.UnitPrice,
+                    TotalPrice = item.TotalPrice
+                }).ToList(),
+                SaleDate = salesOrder.CreatedAt,
+                CashierName = currentUser.FullName,
+                StoreName = _context.Warehouses.Find(storeId)?.Name ?? "Unknown Store"
+            };
+
+            return Ok(response);
         }
         catch (Exception ex)
         {
