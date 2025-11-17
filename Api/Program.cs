@@ -209,8 +209,9 @@ if (connectionString.StartsWith("postgresql://") || connectionString.StartsWith(
         // Build standard Npgsql connection string
         // Use resolved IPv4 IP if available to avoid IPv6 issues
         // If no IPv4 found, we'll still try hostname but connection will likely fail
-        // Note: Removed Min Pool Size as it's not supported in all Npgsql versions
-        connectionString = $"Host={connectionHost};Port={finalPort};Database={database};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true;Include Error Detail=true;Timeout=60;Command Timeout=60;Pooling=true;Max Pool Size=20;Connection Lifetime=300;Keepalive=30";
+        // Note: Removed Min/Max Pool Size as they're not supported in all Npgsql versions
+        // Use basic connection parameters that work with all Npgsql versions
+        connectionString = $"Host={connectionHost};Port={finalPort};Database={database};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true;Include Error Detail=true;Timeout=60;Command Timeout=60";
         
         // For Supabase, add additional connection parameters for better reliability
         if (isSupabase)
@@ -223,8 +224,8 @@ if (connectionString.StartsWith("postgresql://") || connectionString.StartsWith(
                 connectionString += ";Application Name=donpaolo-api";
             }
             
-            // Add connection resilience parameters
-            connectionString += ";No Reset On Close=true;Tcp Keepalive=true;Tcp Keepalive Time=30;Tcp Keepalive Interval=10;Tcp Keepalive Retry Count=3";
+            // Add connection resilience parameters (simplified to avoid unsupported parameter errors)
+            connectionString += ";Tcp Keepalive=true";
             
             if (isPooler)
             {
