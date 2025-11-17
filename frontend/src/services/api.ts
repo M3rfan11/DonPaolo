@@ -823,8 +823,21 @@ class ApiService {
   }
 
   async processPOSSale(saleData: any) {
-    const response = await this.api.post('/api/POS/sale', saleData);
-    return response.data;
+    console.log('🛒 Processing POS sale:', { saleData, url: `${this.api.defaults.baseURL}/api/POS/sale` });
+    try {
+      const response = await this.api.post('/api/POS/sale', saleData);
+      console.log('✅ POS sale successful:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ POS sale failed:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        url: error.config?.url
+      });
+      throw error;
+    }
   }
 
   async getPOSSalesHistory() {

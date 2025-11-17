@@ -275,9 +275,10 @@ const POS: React.FC = () => {
       
       showSnackbar('Sale completed successfully!', 'success');
       loadProducts(); // Refresh product quantities
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error processing sale:', error);
-      showSnackbar('Error processing sale', 'error');
+      const errorMessage = error.response?.data?.message || error.message || 'Error processing sale';
+      showSnackbar(errorMessage, 'error');
     } finally {
       setLoading(false);
     }

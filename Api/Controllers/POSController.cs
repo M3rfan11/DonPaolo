@@ -125,12 +125,45 @@ public class POSController : ControllerBase
             
             // Get current user's store
             var currentUser = await _context.Users.FindAsync(currentUserId);
-            if (currentUser?.AssignedStoreId == null)
+            if (currentUser == null)
             {
-                return StatusCode(403, new { Message = "You are not assigned to any store" });
+                _logger.LogWarning("User {UserId} not found", currentUserId);
+                return StatusCode(404, new { Message = "User not found" });
             }
-
-            var storeId = currentUser.AssignedStoreId.Value;
+            
+            int storeId;
+            if (currentUser.AssignedStoreId == null)
+            {
+                // For SuperAdmin, try to use the first available store
+                if (currentUserRoles.Contains("SuperAdmin"))
+                {
+                    var firstStore = await _context.Warehouses
+                        .Where(w => w.IsActive)
+                        .OrderBy(w => w.Id)
+                        .FirstOrDefaultAsync();
+                    
+                    if (firstStore == null)
+                    {
+                        _logger.LogWarning("No active stores found in database");
+                        return StatusCode(400, new { Message = "No active stores found. Please create a store first." });
+                    }
+                    
+                    // Auto-assign SuperAdmin to the first store for this session
+                    storeId = firstStore.Id;
+                    _logger.LogInformation("SuperAdmin {UserId} ({FullName}) not assigned to store, using first available store: {StoreId} ({StoreName})", 
+                        currentUserId, currentUser.FullName, storeId, firstStore.Name);
+                }
+                else
+                {
+                    _logger.LogWarning("User {UserId} ({FullName}) is not assigned to any store. Roles: {Roles}", 
+                        currentUserId, currentUser.FullName, string.Join(", ", currentUserRoles));
+                    return StatusCode(403, new { Message = "You are not assigned to any store. Please contact an administrator to assign you to a store." });
+                }
+            }
+            else
+            {
+                storeId = currentUser.AssignedStoreId.Value;
+            }
 
             // Validate request
             if (request.Items == null || !request.Items.Any())
@@ -309,8 +342,9 @@ public class POSController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing POS sale");
-            return StatusCode(500, new { Message = "An error occurred while processing the sale" });
+            _logger.LogError(ex, "Error processing POS sale. UserId: {UserId}, Exception: {ExceptionType}, Message: {Message}, StackTrace: {StackTrace}", 
+                GetCurrentUserId(), ex.GetType().Name, ex.Message, ex.StackTrace);
+            return StatusCode(500, new { Message = $"An error occurred while processing the sale: {ex.Message}" });
         }
     }
 
