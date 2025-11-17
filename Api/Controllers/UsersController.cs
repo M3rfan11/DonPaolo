@@ -239,7 +239,9 @@ public class UsersController : ControllerBase
             
             if (!string.IsNullOrEmpty(request.FullName) && user.FullName != request.FullName)
             {
+                _logger.LogInformation("Updating FullName for user {UserId}: '{OldName}' -> '{NewName}'", id, user.FullName, request.FullName);
                 user.FullName = request.FullName;
+                _context.Entry(user).Property(u => u.FullName).IsModified = true;
                 hasChanges = true;
             }
             
@@ -249,29 +251,51 @@ public class UsersController : ControllerBase
                 {
                     return Conflict(new { message = "Email already exists" });
                 }
+                _logger.LogInformation("Updating Email for user {UserId}: '{OldEmail}' -> '{NewEmail}'", id, user.Email, request.Email);
                 user.Email = request.Email;
+                _context.Entry(user).Property(u => u.Email).IsModified = true;
                 hasChanges = true;
             }
             
             if (!string.IsNullOrEmpty(request.Password))
             {
+                _logger.LogInformation("Updating Password for user {UserId}", id);
                 user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
+                _context.Entry(user).Property(u => u.PasswordHash).IsModified = true;
                 hasChanges = true;
             }
             
             if (request.IsActive.HasValue && user.IsActive != request.IsActive.Value)
             {
+                _logger.LogInformation("Updating IsActive for user {UserId}: {OldValue} -> {NewValue}", id, user.IsActive, request.IsActive.Value);
                 user.IsActive = request.IsActive.Value;
+                _context.Entry(user).Property(u => u.IsActive).IsModified = true;
                 hasChanges = true;
             }
 
             if (hasChanges)
             {
                 user.UpdatedAt = DateTime.UtcNow;
+                _context.Entry(user).Property(u => u.UpdatedAt).IsModified = true;
+                
+                // Save changes - explicitly mark properties as modified to ensure EF Core tracks changes
+                var savedCount = await _context.SaveChangesAsync();
+                _logger.LogInformation("Saved {Count} changes to database for user {UserId}. FullName: '{FullName}', Email: '{Email}'", savedCount, id, user.FullName, user.Email);
             }
-
-            // Save changes - EF Core will automatically detect changes to tracked entities
-            await _context.SaveChangesAsync();
+            else
+            {
+                _logger.LogWarning("No changes detected for user {UserId} update request", id);
+                return Ok(new UserResponse
+                {
+                    Id = user.Id,
+                    FullName = user.FullName,
+                    Email = user.Email,
+                    IsActive = user.IsActive,
+                    CreatedAt = user.CreatedAt,
+                    UpdatedAt = user.UpdatedAt,
+                    Roles = user.UserRoles.Select(ur => ur.Role.Name).ToList()
+                });
+            }
 
             var after = System.Text.Json.JsonSerializer.Serialize(new UserResponse
             {

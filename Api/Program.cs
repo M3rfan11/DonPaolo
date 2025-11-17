@@ -328,12 +328,23 @@ builder.Services.AddCors(options =>
     else
     {
         // Production: Allow specific frontend origins
-        var frontendUrls = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() 
-            ?? new[] { "https://donpaolo.netlify.app" };
+        var configuredUrls = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
+        var frontendUrls = configuredUrls ?? new[] { "https://donpaolo.netlify.app" };
+        
+        // Always allow localhost for local development/testing
+        var allOrigins = frontendUrls.ToList();
+        if (!allOrigins.Contains("http://localhost:3000"))
+        {
+            allOrigins.Add("http://localhost:3000");
+        }
+        if (!allOrigins.Contains("http://localhost:3001"))
+        {
+            allOrigins.Add("http://localhost:3001");
+        }
         
         options.AddPolicy("AllowFrontend", policy =>
         {
-            policy.WithOrigins(frontendUrls)
+            policy.WithOrigins(allOrigins.ToArray())
                   .AllowAnyMethod()
                   .AllowAnyHeader()
                   .AllowCredentials();
