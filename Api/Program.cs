@@ -278,6 +278,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
             // Set command timeout
             npgsqlOptions.CommandTimeout(60);
         })
+        .EnableSensitiveDataLogging()  // Log SQL with parameter values (for debugging)
+        .LogTo(Console.WriteLine, Microsoft.Extensions.Logging.LogLevel.Information)  // Log SQL queries
         .ConfigureWarnings(warnings => warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
     }
     else

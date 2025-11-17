@@ -284,9 +284,24 @@ public class UsersController : ControllerBase
                 user.UpdatedAt = DateTime.UtcNow;
                 _context.Entry(user).Property(u => u.UpdatedAt).IsModified = true;
                 
+                // Explicitly set entity state to Modified to ensure EF Core tracks all changes
+                _context.Entry(user).State = EntityState.Modified;
+                
                 // Save changes - explicitly mark properties as modified to ensure EF Core tracks changes
-                var savedCount = await _context.SaveChangesAsync();
-                _logger.LogInformation("Saved {Count} changes to database for user {UserId}. FullName: '{FullName}', Email: '{Email}'", savedCount, id, user.FullName, user.Email);
+                try
+                {
+                    var savedCount = await _context.SaveChangesAsync();
+                    _logger.LogInformation("✅ Saved {Count} changes to database for user {UserId}. FullName: '{FullName}', Email: '{Email}'", savedCount, id, user.FullName, user.Email);
+                    
+                    // Verify the save by reloading from database
+                    await _context.Entry(user).ReloadAsync();
+                    _logger.LogInformation("✅ Verified: Database now shows FullName='{FullName}' for user {UserId}", user.FullName, id);
+                }
+                catch (Exception saveEx)
+                {
+                    _logger.LogError(saveEx, "❌ Failed to save changes for user {UserId}: {Message}", id, saveEx.Message);
+                    throw;
+                }
             }
             else
             {
