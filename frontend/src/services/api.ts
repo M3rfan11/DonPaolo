@@ -65,9 +65,9 @@ class ApiService {
       email 
     });
     try {
-      const response = await this.api.post('/api/Auth/login', { email, password });
+    const response = await this.api.post('/api/Auth/login', { email, password });
       console.log('API Login Success:', response.data);
-      return response.data;
+    return response.data;
     } catch (error: any) {
       console.error('API Login Error Details:', {
         message: error.message,
@@ -132,9 +132,9 @@ class ApiService {
   async updateUser(id: number, userData: any) {
     console.log('🔄 Updating user:', { id, userData, url: `${this.api.defaults.baseURL}/api/Users/${id}` });
     try {
-      const response = await this.api.patch(`/api/Users/${id}`, userData);
+    const response = await this.api.patch(`/api/Users/${id}`, userData);
       console.log('✅ User update successful:', response.data);
-      return response.data;
+    return response.data;
     } catch (error: any) {
       console.error('❌ User update failed:', {
         message: error.message,
@@ -825,9 +825,9 @@ class ApiService {
   async processPOSSale(saleData: any) {
     console.log('🛒 Processing POS sale:', { saleData, url: `${this.api.defaults.baseURL}/api/POS/sale` });
     try {
-      const response = await this.api.post('/api/POS/sale', saleData);
+    const response = await this.api.post('/api/POS/sale', saleData);
       console.log('✅ POS sale successful:', response.data);
-      return response.data;
+    return response.data;
     } catch (error: any) {
       console.error('❌ POS sale failed:', {
         message: error.message,

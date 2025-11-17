@@ -283,8 +283,8 @@ public class UsersController : ControllerBase
             {
                 user.UpdatedAt = DateTime.UtcNow;
                 _context.Entry(user).Property(u => u.UpdatedAt).IsModified = true;
-                
-                // Save changes - EF Core will automatically detect changes to tracked entities
+
+            // Save changes - EF Core will automatically detect changes to tracked entities
                 try
                 {
                     var savedCount = await _context.SaveChangesAsync();
