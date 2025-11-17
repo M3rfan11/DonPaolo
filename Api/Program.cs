@@ -152,57 +152,57 @@ if (connectionString.StartsWith("postgresql://") || connectionString.StartsWith(
             
             // Try IPv4 resolution anyway (will likely fail)
             try
+        {
+            Console.WriteLine($"[DB Config] Resolving hostname '{host}' to IPv4 address...");
+            
+            // Try GetHostEntry first (most common)
+            var hostEntry = Dns.GetHostEntry(host);
+            Console.WriteLine($"[DB Config] DNS returned {hostEntry.AddressList.Length} address(es)");
+            
+            // Log all addresses for debugging
+            foreach (var addr in hostEntry.AddressList)
             {
-                Console.WriteLine($"[DB Config] Resolving hostname '{host}' to IPv4 address...");
+                Console.WriteLine($"[DB Config] Found address: {addr} (Family: {addr.AddressFamily})");
+            }
+            
+            // Find the first IPv4 address
+            var ipv4Address = hostEntry.AddressList
+                .FirstOrDefault(ip => ip.AddressFamily == AddressFamily.InterNetwork);
+            
+            if (ipv4Address != null)
+            {
+                ipv4AddressStr = ipv4Address.ToString();
+                connectionHost = ipv4AddressStr;
+                Console.WriteLine($"[DB Config] ✅ Resolved '{host}' to IPv4: {ipv4AddressStr}");
+            }
+            else
+            {
+                // Try GetHostAddresses as fallback
+                Console.WriteLine($"[DB Config] No IPv4 in GetHostEntry, trying GetHostAddresses...");
+                var addresses = Dns.GetHostAddresses(host);
+                var ipv4FromAddresses = addresses.FirstOrDefault(ip => ip.AddressFamily == AddressFamily.InterNetwork);
                 
-                // Try GetHostEntry first (most common)
-                var hostEntry = Dns.GetHostEntry(host);
-                Console.WriteLine($"[DB Config] DNS returned {hostEntry.AddressList.Length} address(es)");
-                
-                // Log all addresses for debugging
-                foreach (var addr in hostEntry.AddressList)
+                if (ipv4FromAddresses != null)
                 {
-                    Console.WriteLine($"[DB Config] Found address: {addr} (Family: {addr.AddressFamily})");
-                }
-                
-                // Find the first IPv4 address
-                var ipv4Address = hostEntry.AddressList
-                    .FirstOrDefault(ip => ip.AddressFamily == AddressFamily.InterNetwork);
-                
-                if (ipv4Address != null)
-                {
-                    ipv4AddressStr = ipv4Address.ToString();
+                    ipv4AddressStr = ipv4FromAddresses.ToString();
                     connectionHost = ipv4AddressStr;
-                    Console.WriteLine($"[DB Config] ✅ Resolved '{host}' to IPv4: {ipv4AddressStr}");
+                    Console.WriteLine($"[DB Config] ✅ Found IPv4 via GetHostAddresses: {ipv4AddressStr}");
                 }
                 else
                 {
-                    // Try GetHostAddresses as fallback
-                    Console.WriteLine($"[DB Config] No IPv4 in GetHostEntry, trying GetHostAddresses...");
-                    var addresses = Dns.GetHostAddresses(host);
-                    var ipv4FromAddresses = addresses.FirstOrDefault(ip => ip.AddressFamily == AddressFamily.InterNetwork);
-                    
-                    if (ipv4FromAddresses != null)
-                    {
-                        ipv4AddressStr = ipv4FromAddresses.ToString();
-                        connectionHost = ipv4AddressStr;
-                        Console.WriteLine($"[DB Config] ✅ Found IPv4 via GetHostAddresses: {ipv4AddressStr}");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"[DB Config] ⚠️ WARNING: No IPv4 address found for '{host}'");
-                        Console.WriteLine($"[DB Config] ⚠️ This will likely cause connection failures on Render");
-                        Console.WriteLine($"[DB Config] ⚠️ SOLUTION: Use Supabase connection pooler or check Supabase network settings");
-                        // Still use hostname, but this will likely fail
-                        connectionHost = host;
-                    }
+                    Console.WriteLine($"[DB Config] ⚠️ WARNING: No IPv4 address found for '{host}'");
+                    Console.WriteLine($"[DB Config] ⚠️ This will likely cause connection failures on Render");
+                    Console.WriteLine($"[DB Config] ⚠️ SOLUTION: Use Supabase connection pooler or check Supabase network settings");
+                    // Still use hostname, but this will likely fail
+                    connectionHost = host;
                 }
             }
-            catch (Exception dnsEx)
-            {
-                Console.WriteLine($"[DB Config] ❌ DNS resolution failed for '{host}': {dnsEx.Message}");
-                Console.WriteLine($"[DB Config] ⚠️ This will likely cause connection failures");
-                connectionHost = host;
+        }
+        catch (Exception dnsEx)
+        {
+            Console.WriteLine($"[DB Config] ❌ DNS resolution failed for '{host}': {dnsEx.Message}");
+            Console.WriteLine($"[DB Config] ⚠️ This will likely cause connection failures");
+            connectionHost = host;
             }
         }
         
@@ -361,6 +361,7 @@ builder.Services.AddCors(options =>
     else
     {
         // Production: Allow specific frontend origins
+        // Read from environment variables: AllowedOrigins__0, AllowedOrigins__1, etc.
         var configuredUrls = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
         var frontendUrls = configuredUrls ?? new[] { "https://donpaolo.netlify.app" };
         
@@ -374,6 +375,9 @@ builder.Services.AddCors(options =>
         {
             allOrigins.Add("http://localhost:3001");
         }
+        
+        // Log allowed origins for debugging
+        Console.WriteLine($"[CORS] Configured allowed origins: {string.Join(", ", allOrigins)}");
         
         options.AddPolicy("AllowFrontend", policy =>
         {
@@ -621,9 +625,9 @@ using (var scope = app.Services.CreateScope())
                 else
                 {
                     logger.LogError("No exception thrown, but connection failed. This usually means:");
-                    logger.LogError("  1. Database server is not reachable");
+                logger.LogError("  1. Database server is not reachable");
                     logger.LogError("  2. Network connectivity issues");
-                    logger.LogError("  3. Firewall blocking the connection");
+                logger.LogError("  3. Firewall blocking the connection");
                     logger.LogError("  4. Incorrect connection string or credentials");
                     logger.LogError("  5. SSL/TLS handshake failure");
                 }
