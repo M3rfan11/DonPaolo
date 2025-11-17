@@ -284,33 +284,14 @@ public class UsersController : ControllerBase
                 user.UpdatedAt = DateTime.UtcNow;
                 _context.Entry(user).Property(u => u.UpdatedAt).IsModified = true;
                 
-                // Use explicit transaction to ensure changes are committed
-                // This is important when using Supabase pooler connections
-                using var transaction = await _context.Database.BeginTransactionAsync();
+                // Save changes - EF Core will automatically detect changes to tracked entities
                 try
                 {
-                    // Explicitly set entity state to Modified to ensure EF Core tracks all changes
-                    _context.Entry(user).State = EntityState.Modified;
-                    
-                    // Save changes - explicitly mark properties as modified to ensure EF Core tracks changes
                     var savedCount = await _context.SaveChangesAsync();
-                    
-                    // Explicitly commit the transaction
-                    await transaction.CommitAsync();
-                    
                     _logger.LogInformation("✅ Saved {Count} changes to database for user {UserId}. FullName: '{FullName}', Email: '{Email}'", savedCount, id, user.FullName, user.Email);
-                    
-                    // Detach and reload to verify the save from a fresh connection
-                    _context.Entry(user).State = EntityState.Detached;
-                    var verifyUser = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == id);
-                    if (verifyUser != null)
-                    {
-                        _logger.LogInformation("✅ Verified: Database now shows FullName='{FullName}' for user {UserId}", verifyUser.FullName, id);
-                    }
                 }
                 catch (Exception saveEx)
                 {
-                    await transaction.RollbackAsync();
                     _logger.LogError(saveEx, "❌ Failed to save changes for user {UserId}: {Message}", id, saveEx.Message);
                     throw;
                 }
