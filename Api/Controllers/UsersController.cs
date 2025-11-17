@@ -213,6 +213,9 @@ public class UsersController : ControllerBase
     {
         try
         {
+            _logger.LogInformation("UpdateUser called for ID: {UserId}. Request data: FullName='{FullName}', Email='{Email}', IsActive={IsActive}", 
+                id, request.FullName ?? "null", request.Email ?? "null", request.IsActive);
+            
             var user = await _context.Users
                 .Include(u => u.UserRoles)
                 .ThenInclude(ur => ur.Role)
@@ -220,8 +223,11 @@ public class UsersController : ControllerBase
 
             if (user == null)
             {
+                _logger.LogWarning("User with ID {UserId} not found", id);
                 return NotFound(new { message = "User not found" });
             }
+            
+            _logger.LogInformation("Current user data: FullName='{FullName}', Email='{Email}'", user.FullName, user.Email);
 
             var before = System.Text.Json.JsonSerializer.Serialize(new UserResponse
             {
