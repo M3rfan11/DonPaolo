@@ -18,13 +18,43 @@ builder.Services.AddSwaggerGen();
 
 // Database
 // Try multiple ways to get the connection string (Render might set it differently)
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
-    ?? Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
-    ?? Environment.GetEnvironmentVariable("DATABASE_URL"); // Render sometimes uses this
+// Check all possible sources first
+var fromAppSettings = builder.Configuration.GetConnectionString("DefaultConnection");
+var fromEnvVar = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
+var fromDatabseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
 
-// Log connection string status (without exposing password)
+// Log connection string source detection
+Console.WriteLine("[DB Config] ========================================");
+Console.WriteLine("[DB Config] Connection String Source Detection");
+Console.WriteLine("[DB Config] ========================================");
+Console.WriteLine($"[DB Config] From appsettings.json: {(string.IsNullOrEmpty(fromAppSettings) ? "NOT SET" : "SET (SQLite for local dev)")}");
+Console.WriteLine($"[DB Config] From ConnectionStrings__DefaultConnection env var: {(string.IsNullOrEmpty(fromEnvVar) ? "NOT SET ❌" : "SET ✅")}");
+Console.WriteLine($"[DB Config] From DATABASE_URL env var: {(string.IsNullOrEmpty(fromDatabseUrl) ? "NOT SET" : "SET")}");
+
+// Get connection string (priority: env var > DATABASE_URL > appsettings)
+var connectionString = fromEnvVar 
+    ?? fromDatabseUrl 
+    ?? fromAppSettings;
+
+// Log which source was used
+string sourceUsed = "UNKNOWN";
+if (!string.IsNullOrEmpty(fromEnvVar))
+    sourceUsed = "Environment Variable (ConnectionStrings__DefaultConnection) ✅";
+else if (!string.IsNullOrEmpty(fromDatabseUrl))
+    sourceUsed = "Environment Variable (DATABASE_URL)";
+else if (!string.IsNullOrEmpty(fromAppSettings))
+    sourceUsed = "appsettings.json (⚠️ This is SQLite for local dev - should NOT be used in production!)";
+
+Console.WriteLine($"[DB Config] Connection string source: {sourceUsed}");
+if (!string.IsNullOrEmpty(connectionString))
+{
+    Console.WriteLine($"[DB Config] Connection string starts with: {connectionString.Substring(0, Math.Min(20, connectionString.Length))}...");
+}
+Console.WriteLine("[DB Config] ========================================");
+
 if (string.IsNullOrWhiteSpace(connectionString))
 {
+    Console.WriteLine("[DB Config] ❌ ERROR: No connection string found from any source!");
     throw new InvalidOperationException(
         "Connection string 'DefaultConnection' is missing!\n" +
         "Please ensure:\n" +
