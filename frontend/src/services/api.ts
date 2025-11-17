@@ -1,6 +1,13 @@
 import axios, { AxiosInstance } from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5152';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://donpaolo.onrender.com';
+
+// Log the API URL being used (for debugging)
+console.log('🔧 API Configuration:', {
+  'REACT_APP_API_URL env var': process.env.REACT_APP_API_URL,
+  'API_BASE_URL (final)': API_BASE_URL,
+  'Using default?': !process.env.REACT_APP_API_URL
+});
 
 class ApiService {
   private api: AxiosInstance;
@@ -31,6 +38,17 @@ class ApiService {
     this.api.interceptors.response.use(
       (response) => response,
       (error) => {
+        // Log detailed error information to console
+        console.error('API Error:', {
+          url: error.config?.url,
+          method: error.config?.method,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          message: error.message,
+          fullError: error
+        });
+        
         if (error.response?.status === 401) {
           localStorage.removeItem('authToken');
           window.location.href = '/login';
@@ -42,8 +60,23 @@ class ApiService {
 
   // ==================== AUTHENTICATION ====================
   async login(email: string, password: string) {
-    const response = await this.api.post('/api/Auth/login', { email, password });
-    return response.data;
+    console.log('API Login Request:', { 
+      url: `${this.api.defaults.baseURL}/api/Auth/login`,
+      email 
+    });
+    try {
+      const response = await this.api.post('/api/Auth/login', { email, password });
+      console.log('API Login Success:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('API Login Error Details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        statusText: error.response?.statusText
+      });
+      throw error;
+    }
   }
 
   async register(userData: any) {
@@ -97,8 +130,20 @@ class ApiService {
   }
 
   async updateUser(id: number, userData: any) {
-    const response = await this.api.patch(`/api/Users/${id}`, userData);
-    return response.data;
+    console.log('🔄 Updating user:', { id, userData, url: `${this.api.defaults.baseURL}/api/Users/${id}` });
+    try {
+      const response = await this.api.patch(`/api/Users/${id}`, userData);
+      console.log('✅ User update successful:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ User update failed:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        url: error.config?.url
+      });
+      throw error;
+    }
   }
 
   async deleteUser(id: number) {
