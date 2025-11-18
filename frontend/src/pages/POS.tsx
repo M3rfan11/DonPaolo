@@ -81,6 +81,21 @@ interface SaleResponse {
   storeName: string;
 }
 
+// Currency formatting function for EGP
+const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat('ar-EG', {
+    style: 'currency',
+    currency: 'EGP',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(amount);
+};
+
+// Simple EGP format for display (e.g., "150.00 EGP")
+const formatEGP = (amount: number): string => {
+  return `${amount.toFixed(2)} EGP`;
+};
+
 const POS: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -439,11 +454,11 @@ const POS: React.FC = () => {
                 <div class="item-name">${item.productName}</div>
                 <div class="item-details">
                   <span class="item-quantity">${item.quantity}x</span>
-                  <span class="item-price">$${item.unitPrice.toFixed(2)}</span>
+                  <span class="item-price">${formatEGP(item.unitPrice)}</span>
                 </div>
               </div>
               <div class="item-row" style="justify-content: flex-end; font-size: 10px;">
-                <span>$${item.totalPrice.toFixed(2)}</span>
+                <span>${formatEGP(item.totalPrice)}</span>
               </div>
             `).join('')}
           </div>
@@ -453,23 +468,23 @@ const POS: React.FC = () => {
           <div class="totals">
             <div class="total-line">
               <span>Subtotal:</span>
-              <span>$${currentSale.totalAmount.toFixed(2)}</span>
+              <span>${formatEGP(currentSale.totalAmount)}</span>
             </div>
             ${currentSale.discountAmount > 0 ? `
               <div class="total-line">
                 <span>Discount:</span>
-                <span>-$${currentSale.discountAmount.toFixed(2)}</span>
+                <span>-${formatEGP(currentSale.discountAmount)}</span>
               </div>
             ` : ''}
             ${currentSale.taxAmount > 0 ? `
               <div class="total-line">
                 <span>Tax:</span>
-                <span>$${currentSale.taxAmount.toFixed(2)}</span>
+                <span>${formatEGP(currentSale.taxAmount)}</span>
               </div>
             ` : ''}
             <div class="total-line final-total">
               <span>TOTAL:</span>
-              <span>$${currentSale.finalAmount.toFixed(2)}</span>
+              <span>${formatEGP(currentSale.finalAmount)}</span>
             </div>
           </div>
           
@@ -713,7 +728,7 @@ const POS: React.FC = () => {
                           {product.categoryName}
                         </Typography>
                         <Typography variant="h6" sx={{ color: '#000000', fontWeight: 'bold' }}>
-                          ${product.price.toFixed(2)}
+                          {formatEGP(product.price)}
                         </Typography>
                         {product.barcode && (
                           <Typography variant="caption" color="text.secondary">
@@ -798,8 +813,8 @@ const POS: React.FC = () => {
                                 </IconButton>
                               </Box>
                             </TableCell>
-                            <TableCell>${item.unitPrice.toFixed(2)}</TableCell>
-                            <TableCell>${item.totalPrice.toFixed(2)}</TableCell>
+                            <TableCell>{formatEGP(item.unitPrice)}</TableCell>
+                            <TableCell>{formatEGP(item.totalPrice)}</TableCell>
                             <TableCell>
                               <IconButton
                                 size="small"
@@ -821,20 +836,20 @@ const POS: React.FC = () => {
                   <Box sx={{ mb: 2 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                       <Typography>Subtotal:</Typography>
-                      <Typography>${getCartTotal().toFixed(2)}</Typography>
+                      <Typography>{formatEGP(getCartTotal())}</Typography>
                     </Box>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                       <Typography>Discount:</Typography>
-                      <Typography>-${discountAmount.toFixed(2)}</Typography>
+                      <Typography>-{formatEGP(discountAmount)}</Typography>
                     </Box>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                       <Typography>Tax:</Typography>
-                      <Typography>${taxAmount.toFixed(2)}</Typography>
+                      <Typography>{formatEGP(taxAmount)}</Typography>
                     </Box>
                     <Divider sx={{ my: 1 }} />
                     <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                       <Typography variant="h6">Total:</Typography>
-                      <Typography variant="h6">${getFinalTotal().toFixed(2)}</Typography>
+                      <Typography variant="h6">{formatEGP(getFinalTotal())}</Typography>
                     </Box>
                   </Box>
 
@@ -1026,8 +1041,8 @@ const POS: React.FC = () => {
                       <TableRow key={index}>
                         <TableCell>{item.productName}</TableCell>
                         <TableCell>{item.quantity}</TableCell>
-                        <TableCell>${item.unitPrice.toFixed(2)}</TableCell>
-                        <TableCell>${item.totalPrice.toFixed(2)}</TableCell>
+                        <TableCell>{formatEGP(item.unitPrice)}</TableCell>
+                        <TableCell>{formatEGP(item.totalPrice)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -1037,20 +1052,20 @@ const POS: React.FC = () => {
               <Box sx={{ mt: 2 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                   <Typography>Subtotal:</Typography>
-                  <Typography>${currentSale.totalAmount.toFixed(2)}</Typography>
+                  <Typography>{formatEGP(currentSale.totalAmount)}</Typography>
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                   <Typography>Discount:</Typography>
-                  <Typography>-${currentSale.discountAmount.toFixed(2)}</Typography>
+                  <Typography>-{formatEGP(currentSale.discountAmount)}</Typography>
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                   <Typography>Tax:</Typography>
-                  <Typography>${currentSale.taxAmount.toFixed(2)}</Typography>
+                  <Typography>{formatEGP(currentSale.taxAmount)}</Typography>
                 </Box>
                 <Divider sx={{ my: 1 }} />
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                   <Typography variant="h6">Total:</Typography>
-                  <Typography variant="h6">${currentSale.finalAmount.toFixed(2)}</Typography>
+                  <Typography variant="h6">{formatEGP(currentSale.finalAmount)}</Typography>
                 </Box>
               </Box>
             </Box>
