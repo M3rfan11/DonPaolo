@@ -81,16 +81,6 @@ interface SaleResponse {
   storeName: string;
 }
 
-// Currency formatting function for EGP
-const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('ar-EG', {
-    style: 'currency',
-    currency: 'EGP',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(amount);
-};
-
 // Simple EGP format for display (e.g., "150.00 EGP")
 const formatEGP = (amount: number): string => {
   return `${amount.toFixed(2)} EGP`;
