@@ -28,6 +28,12 @@ interface PrinterConfigDialogProps {
   onConfigSaved?: () => void;
 }
 
+// Detect if running on mobile device
+const isMobileDevice = () => {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+         (window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
+};
+
 const PrinterConfigDialog: React.FC<PrinterConfigDialogProps> = ({
   open,
   onClose,
