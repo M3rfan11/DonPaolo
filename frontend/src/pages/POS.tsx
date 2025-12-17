@@ -320,54 +320,34 @@ const POS: React.FC = () => {
       const printerConfig = printerService.getConfig();
       const isMobile = isMobileDevice();
 
-      // For mobile devices, try direct HTTP printing first, then fallback to API/browser
-      // For desktop, try ePOS SDK first if on same network, then fallback to API
+      // For mobile devices, use bridge (Mac running printer helper)
+      // For desktop, try ePOS SDK direct connection
       if (isMobile) {
-        // Mobile: Try direct HTTP printing to printer first (if on same network)
-        const eposConfig = eposPrinterService.getConfig();
-        
-        if (eposConfig && autoPrint) {
+        // Mobile: Use bridge URL to print via Mac
+        if (printerConfig && printerConfig.printerBridgeUrl && autoPrint) {
           try {
-            // Try direct HTTP print (bypasses WebSocket which Safari blocks)
-            const receiptLines = formatReceiptForEpos(currentSale, true);
-            await eposPrinterService.printViaHttp(receiptLines, {
-              openDrawer: openDrawer,
-              cutPaper: true,
-            });
-            showSnackbar('Receipt printed successfully!', 'success');
+            // Print via bridge (Mac forwards to printer)
+            await printerService.printReceipt(invoiceContent, openDrawer);
+            showSnackbar('Receipt printed via bridge!', 'success');
 
             // Print kitchen ticket if needed
             if (kitchenContent) {
               setTimeout(async () => {
                 try {
-                  const kitchenLines = formatReceiptForEpos(currentSale, false);
-                  await eposPrinterService.printViaHttp(kitchenLines, {
-                    openDrawer: false,
-                    cutPaper: true,
-                  });
+                  await printerService.printReceipt(kitchenContent, false);
                 } catch (error) {
                   console.error('Error printing kitchen ticket:', error);
                 }
               }, 1000);
             }
-          } catch (httpError: any) {
-            console.error('Direct HTTP print failed:', httpError);
-            
-            // Fallback to API-based printing
-            if (printerConfig) {
-              try {
-                await printerService.printReceipt(invoiceContent, openDrawer);
-                showSnackbar('Receipt sent to printer via API!', 'success');
-              } catch (apiError: any) {
-                console.error('API print also failed:', apiError);
-                showSnackbar(`Print failed. Make sure your phone is on the same WiFi as the printer.`, 'warning');
-                printViaBrowser(invoiceContent, kitchenContent, autoPrint);
-              }
-            } else {
-              showSnackbar(`Print failed. Configure printer settings first.`, 'warning');
-              printViaBrowser(invoiceContent, kitchenContent, autoPrint);
-            }
+          } catch (bridgeError: any) {
+            console.error('Bridge print failed:', bridgeError);
+            showSnackbar(`Print failed: ${bridgeError.message}. Check if printer helper is running on your Mac.`, 'warning');
+            printViaBrowser(invoiceContent, kitchenContent, autoPrint);
           }
+        } else if (!printerConfig?.printerBridgeUrl) {
+          showSnackbar('Please configure Bridge URL in Printer Settings first.', 'warning');
+          printViaBrowser(invoiceContent, kitchenContent, autoPrint);
         } else {
           // No printer configured, use browser print
           printViaBrowser(invoiceContent, kitchenContent, autoPrint);

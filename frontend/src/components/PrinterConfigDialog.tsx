@@ -41,8 +41,9 @@ const PrinterConfigDialog: React.FC<PrinterConfigDialogProps> = ({
 }) => {
   const [printerIp, setPrinterIp] = useState('');
   // Default to port 8043 (HTTPS) for mobile, 8008 for desktop
-  const [printerPort, setPrinterPort] = useState(isMobileDevice() ? '8043' : '8008');
+  const [printerPort, setPrinterPort] = useState(isMobileDevice() ? '8008' : '8008');
   const [deviceId, setDeviceId] = useState('local_printer');
+  const [bridgeUrl, setBridgeUrl] = useState(''); // URL of Mac running printer helper
   const [discovering, setDiscovering] = useState(false);
   const [testing, setTesting] = useState(false);
   const [connecting, setConnecting] = useState(false);
@@ -60,6 +61,7 @@ const PrinterConfigDialog: React.FC<PrinterConfigDialogProps> = ({
         setPrinterIp(config.printerIp);
         setPrinterPort(config.printerPort.toString());
         setDeviceId(config.deviceId || 'local_printer');
+        setBridgeUrl(config.printerBridgeUrl || '');
       } else if (eposConfig) {
         setPrinterIp(eposConfig.printerIp);
         setPrinterPort(eposConfig.printerPort.toString());
@@ -161,7 +163,7 @@ const PrinterConfigDialog: React.FC<PrinterConfigDialogProps> = ({
     setTestResult(null);
 
     const isMobile = isMobileDevice();
-    const port = parseInt(printerPort, 10) || (isMobile ? 8043 : 8008);
+    const port = parseInt(printerPort, 10) || 8008;
 
     try {
       const config: EposPrinterConfig = {
@@ -170,45 +172,79 @@ const PrinterConfigDialog: React.FC<PrinterConfigDialogProps> = ({
         deviceId: deviceId.trim() || 'local_printer',
         crypto: true,
         buffer: false,
-        useSSL: isMobile || port === 8043, // Use SSL for mobile or if port is 8043
       };
 
-      // Try direct ePOS connection (works on both mobile and desktop)
-      // On mobile, the ePOS service will use HTTPS (port 8043)
-      await eposPrinterService.connect(config);
-      eposPrinterService.saveConfig(config);
-      printerService.saveConfig({
-        printerIp: config.printerIp,
-        printerPort: config.printerPort,
-        deviceId: config.deviceId,
-      });
-      
-      setIsConnected(true);
-      setTestResult({
-        success: true,
-        message: isMobile 
-          ? `Connected to printer via HTTPS! (${config.printerIp}:${port})`
-          : `Connected to printer successfully! (${config.printerIp}:${port})`,
-      });
+      if (isMobile) {
+        // Mobile: Test bridge connection instead of direct printer connection
+        if (!bridgeUrl.trim()) {
+          setTestResult({
+            success: false,
+            message: 'Please enter the Bridge URL (your Mac\'s IP running the printer helper)',
+          });
+          setConnecting(false);
+          return;
+        }
+
+        // Save config with bridge URL
+        printerService.saveConfig({
+          printerIp: config.printerIp,
+          printerPort: config.printerPort,
+          deviceId: config.deviceId,
+          printerBridgeUrl: bridgeUrl.trim(),
+        });
+        eposPrinterService.saveConfig(config);
+
+        // Test bridge connection
+        try {
+          const testUrl = `${bridgeUrl.trim()}/discover-printers?ip=${config.printerIp}`;
+          const response = await fetch(testUrl);
+          
+          if (response.ok) {
+            const printers = await response.json();
+            if (printers && printers.length > 0) {
+              setTestResult({
+                success: true,
+                message: `✅ Bridge connected! Found printer at ${printers[0].IpAddress || printers[0].ipAddress}:${printers[0].Port || printers[0].port}`,
+              });
+            } else {
+              setTestResult({
+                success: true,
+                message: `✅ Bridge connected! Config saved. Printer discovery returned empty (printer may still work).`,
+              });
+            }
+          } else {
+            throw new Error(`Bridge returned ${response.status}`);
+          }
+        } catch (bridgeError: any) {
+          setTestResult({
+            success: false,
+            message: `Cannot reach Bridge at ${bridgeUrl}. Make sure printer helper is running on your Mac.\n\nError: ${bridgeError.message}`,
+          });
+        }
+      } else {
+        // Desktop: Try direct ePOS connection
+        await eposPrinterService.connect(config);
+        eposPrinterService.saveConfig(config);
+        printerService.saveConfig({
+          printerIp: config.printerIp,
+          printerPort: config.printerPort,
+          deviceId: config.deviceId,
+        });
+        
+        setIsConnected(true);
+        setTestResult({
+          success: true,
+          message: `Connected to printer successfully! (${config.printerIp}:${port})`,
+        });
+      }
 
       if (onConfigSaved) {
         onConfigSaved();
       }
     } catch (error: any) {
-      let errorMsg = error.message || 'Unknown error';
-      
-      if (isMobile) {
-        errorMsg = `Connection failed: ${errorMsg}\n\n` +
-          '📱 Mobile troubleshooting:\n' +
-          '• Make sure your phone is on the SAME WiFi as the printer\n' +
-          '• Use port 8043 (HTTPS) - required for Safari\n' +
-          '• Check Safari Settings → Privacy → enable "Local Network"\n' +
-          '• Make sure the printer is turned on';
-      }
-      
       setTestResult({
         success: false,
-        message: errorMsg,
+        message: `Connection failed: ${error.message}`,
       });
       setIsConnected(false);
     } finally {
@@ -267,19 +303,19 @@ const PrinterConfigDialog: React.FC<PrinterConfigDialogProps> = ({
       </DialogTitle>
       <DialogContent>
         <Box sx={{ mt: 2 }}>
-          <Alert severity={isMobileDevice() ? 'info' : 'info'} sx={{ mb: 3 }}>
+          <Alert severity={isMobileDevice() ? 'warning' : 'info'} sx={{ mb: 3 }}>
             {isMobileDevice() ? (
               <>
                 <Typography variant="body2" fontWeight="bold">
-                  📱 Mobile Device Detected - Direct Connection Mode
+                  📱 Mobile Printing via Local Bridge
                 </Typography>
                 <Typography variant="body2" sx={{ mt: 1 }}>
-                  <strong>Requirements for mobile printing:</strong>
+                  Safari blocks direct printer connections. Use your Mac as a bridge:
                 </Typography>
                 <Typography variant="body2" component="div" sx={{ mt: 0.5, pl: 1 }}>
-                  ✅ Your phone must be on the <strong>SAME WiFi</strong> as the printer<br />
-                  ✅ Use port <strong>8043</strong> (HTTPS) - this is required for Safari<br />
-                  ✅ In Safari Settings → Privacy → enable <strong>Local Network</strong>
+                  1. Run printer helper on your Mac: <code>cd printer/printer-helper-dotnet && dotnet run</code><br />
+                  2. Enter your Mac's IP below (e.g., <code>http://10.10.31.22:5056</code>)<br />
+                  3. Your Mac will forward prints to the printer
                 </Typography>
               </>
             ) : (
@@ -288,6 +324,19 @@ const PrinterConfigDialog: React.FC<PrinterConfigDialogProps> = ({
               </Typography>
             )}
           </Alert>
+
+          {isMobileDevice() && (
+            <TextField
+              fullWidth
+              label="Bridge URL (Your Mac's IP)"
+              value={bridgeUrl}
+              onChange={(e) => setBridgeUrl(e.target.value)}
+              placeholder="http://10.10.31.22:5056"
+              helperText="IP of the computer running printer helper (required for mobile)"
+              sx={{ mb: 2 }}
+              error={!bridgeUrl.trim()}
+            />
+          )}
 
           <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
             <TextField
