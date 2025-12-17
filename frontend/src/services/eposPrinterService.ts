@@ -91,6 +91,7 @@ export interface PrinterConfig {
   deviceId?: string;
   crypto?: boolean;
   buffer?: boolean;
+  useSSL?: boolean; // Use HTTPS connection (required for Safari/iOS)
 }
 
 class EposPrinterService {
@@ -163,7 +164,18 @@ class EposPrinterService {
   }
 
   /**
+   * Detect if running on mobile/Safari
+   */
+  private isMobileOrSafari(): boolean {
+    const ua = navigator.userAgent;
+    return /iPhone|iPad|iPod|Android/i.test(ua) || 
+           (/Safari/i.test(ua) && !/Chrome/i.test(ua));
+  }
+
+  /**
    * Connect to printer
+   * For Safari/iOS: Uses HTTPS (port 8043) with SSL enabled
+   * For Desktop: Uses HTTP (port 8008) by default
    */
   async connect(config?: PrinterConfig): Promise<boolean> {
     const printerConfig = config || this.getConfig();
@@ -178,19 +190,43 @@ class EposPrinterService {
       // Create ePOS device
       this.eposDevice = new window.epson.ePOSDevice();
 
+      // Determine if we should use SSL (required for Safari/iOS)
+      const isMobile = this.isMobileOrSafari();
+      const useSSL = printerConfig.useSSL ?? isMobile;
+      
+      // Use appropriate port based on SSL
+      // Port 8043 is the standard HTTPS port for Epson ePOS printers
+      // Port 8008 is the standard HTTP port
+      let port = printerConfig.printerPort;
+      if (useSSL && port === 8008) {
+        port = 8043; // Switch to HTTPS port
+        console.log('📱 Mobile/Safari detected: Using HTTPS port 8043');
+      }
+
+      console.log(`🖨️ Connecting to printer at ${printerConfig.printerIp}:${port} (SSL: ${useSSL})`);
+
       return new Promise((resolve, reject) => {
+        // Set timeout for connection
+        const timeout = setTimeout(() => {
+          this.isConnected = false;
+          this.notifyConnectionChange(false);
+          reject(new Error('Connection timeout. Make sure the printer is on and your device is on the same network.'));
+        }, 10000);
+
         // Connect to printer
         this.eposDevice!.connect(
           printerConfig.printerIp,
-          printerConfig.printerPort.toString(),
+          port.toString(),
           (result: string) => {
+            clearTimeout(timeout);
+            
             if (result === 'OK') {
-              // Create printer device
+              // Create printer device with crypto enabled for SSL
               this.eposDevice!.createDevice(
                 printerConfig.deviceId || 'local_printer',
                 this.eposDevice!.DEVICE_TYPE_PRINTER,
                 {
-                  crypto: printerConfig.crypto ?? true,
+                  crypto: useSSL || (printerConfig.crypto ?? true),
                   buffer: printerConfig.buffer ?? false,
                 },
                 (device: PrinterDevice, code: string) => {
@@ -198,8 +234,9 @@ class EposPrinterService {
                     this.printerDevice = device;
                     this.setupPrinterCallbacks();
                     this.isConnected = true;
-                    this.config = printerConfig;
+                    this.config = { ...printerConfig, printerPort: port, useSSL };
                     this.notifyConnectionChange(true);
+                    console.log('✅ Printer connected successfully');
                     resolve(true);
                   } else {
                     this.isConnected = false;
@@ -211,7 +248,16 @@ class EposPrinterService {
             } else {
               this.isConnected = false;
               this.notifyConnectionChange(false);
-              reject(new Error(`Failed to connect: ${result}`));
+              
+              // Provide helpful error messages
+              let errorMessage = `Failed to connect: ${result}`;
+              if (isMobile) {
+                errorMessage += '\n\n📱 Mobile troubleshooting:\n' +
+                  '1. Make sure your phone is on the SAME WiFi as the printer\n' +
+                  '2. Try port 8043 (HTTPS) instead of 8008\n' +
+                  '3. In Safari Settings > Privacy, enable "Local Network"';
+              }
+              reject(new Error(errorMessage));
             }
           }
         );
