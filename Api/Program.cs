@@ -9,6 +9,12 @@ using Api.Services;
 using Api.Middleware;
 using Api;
 
+// Disable file watching in production to prevent inotify limit errors
+if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Production")
+{
+    Environment.SetEnvironmentVariable("DOTNET_USE_POLLING_FILE_WATCHER", "0");
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.

@@ -3,7 +3,7 @@ services:
     name: donpaolo-api
     plan: free  # Change to 'starter' ($7/month) for production - always-on service
     region: oregon  # Options: oregon, frankfurt, singapore, mumbai (choose closest to users)
-    buildCommand: cd Api && dotnet restore && dotnet publish -c Release -o ./publish
+    buildCommand: cd Api && dotnet restore && dotnet publish -c Release -o ./publish /p:UseAppHost=false
     startCommand: cd Api/publish && dotnet Api.dll --urls http://0.0.0.0:$PORT
     healthCheckPath: /api/Health
     envVars:
@@ -13,6 +13,13 @@ services:
         value: http://0.0.0.0:$PORT
       - key: PORT
         value: 10000
+      # Disable file watching to prevent inotify limit errors
+      - key: DOTNET_USE_POLLING_FILE_WATCHER
+        value: "0"
+      - key: DOTNET_SKIP_FIRST_TIME_EXPERIENCE
+        value: "true"
+      - key: DOTNET_CLI_TELEMETRY_OPTOUT
+        value: "true"
       # Supabase Database Connection - Set manually in Render dashboard with your Supabase connection string
       - key: ConnectionStrings__DefaultConnection
         sync: false  # IMPORTANT: Set this manually with your Supabase connection string from Step 2
