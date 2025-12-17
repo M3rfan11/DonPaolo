@@ -4,7 +4,9 @@
  * Works with iPad and deployed environments via ngrok
  */
 
-const PRINTER_HELPER_URL = process.env.REACT_APP_PRINTER_HELPER_URL || 'http://localhost:5056';
+// Use main API URL instead of separate printer helper
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:10000';
+const PRINTER_HELPER_URL = process.env.REACT_APP_PRINTER_HELPER_URL || API_BASE_URL;
 
 export interface PrinterConfig {
   printerIp: string;
@@ -68,7 +70,8 @@ class PrinterService {
       if (subnetMask) params.append('subnetMask', subnetMask);
       if (gateway) params.append('gateway', gateway);
 
-      const response = await fetch(`${PRINTER_HELPER_URL}/discover-printers?${params}`);
+      // Use main API endpoint
+      const response = await fetch(`${PRINTER_HELPER_URL}/api/Printer/discover?${params}`);
       if (!response.ok) {
         throw new Error(`Failed to discover printer: ${response.statusText}`);
       }
@@ -166,14 +169,14 @@ class PrinterService {
       // Convert HTML to image
       const imageDataUrl = await this.htmlToImage(htmlContent, 300);
 
-      // Send to printer helper backend
+      // Send to main API printer endpoint
       const params = new URLSearchParams({
         printerIp: config.printerIp,
         printerPort: config.printerPort.toString(),
         deviceId: config.deviceId || 'local_printer',
       });
 
-      const response = await fetch(`${PRINTER_HELPER_URL}/print-images?${params}`, {
+      const response = await fetch(`${PRINTER_HELPER_URL}/api/Printer/print-images?${params}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

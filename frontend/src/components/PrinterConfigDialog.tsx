@@ -42,8 +42,9 @@ const PrinterConfigDialog: React.FC<PrinterConfigDialogProps> = ({
   const [discoveredPrinters, setDiscoveredPrinters] = useState<DiscoveredPrinter[]>([]);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  // Use main API URL - printer endpoints are now in the main API
   const [helperUrl, setHelperUrl] = useState(
-    process.env.REACT_APP_PRINTER_HELPER_URL || 'http://localhost:5056'
+    process.env.REACT_APP_API_URL || process.env.REACT_APP_PRINTER_HELPER_URL || 'http://localhost:10000'
   );
 
   useEffect(() => {
@@ -235,16 +236,16 @@ const PrinterConfigDialog: React.FC<PrinterConfigDialogProps> = ({
       <DialogContent>
         <Box sx={{ mt: 2 }}>
           <Alert severity="info" sx={{ mb: 3 }}>
-            Configure your Epson ePOS-Print printer to enable printing from iPad and deployed environments.
-            The printer helper backend must be running and accessible.
+            Configure your Epson ePOS-Print printer to enable printing from mobile devices and deployed environments.
+            Printer functionality is integrated into the main API - no separate service needed!
           </Alert>
 
           <TextField
             fullWidth
-            label="Printer Helper URL"
+            label="API URL"
             value={helperUrl}
             onChange={(e) => setHelperUrl(e.target.value)}
-            helperText="URL of the printer helper backend (use ngrok URL when deployed)"
+            helperText="Main API URL (printer endpoints are integrated)"
             sx={{ mb: 2 }}
             disabled
           />
