@@ -10,12 +10,25 @@ using Api.Middleware;
 using Api;
 
 // Disable file watching in production to prevent inotify limit errors
-if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Production")
+var isProduction = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Production";
+if (isProduction)
 {
     Environment.SetEnvironmentVariable("DOTNET_USE_POLLING_FILE_WATCHER", "0");
+    // Disable file watching for configuration files
+    Environment.SetEnvironmentVariable("DOTNET_SKIP_FIRST_TIME_EXPERIENCE", "true");
+    Environment.SetEnvironmentVariable("DOTNET_CLI_TELEMETRY_OPTOUT", "true");
 }
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Disable file watching in production
+if (isProduction)
+{
+    builder.Configuration.Sources.Clear();
+    builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: false);
+    builder.Configuration.AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: false);
+    builder.Configuration.AddEnvironmentVariables();
+}
 
 // Add services to the container.
 builder.Services.AddControllers()
