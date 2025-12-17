@@ -173,6 +173,89 @@ class EposPrinterService {
   }
 
   /**
+   * Print via direct HTTP POST (fallback for Safari/iOS)
+   * This bypasses the WebSocket connection which Safari blocks
+   */
+  async printViaHttp(
+    lines: string[],
+    options: {
+      openDrawer?: boolean;
+      cutPaper?: boolean;
+    } = {}
+  ): Promise<boolean> {
+    const config = this.getConfig();
+    if (!config) {
+      throw new Error('Printer not configured');
+    }
+
+    const port = config.printerPort || 8008;
+    const useSSL = this.isMobileOrSafari() || port === 8043;
+    const protocol = useSSL ? 'https' : 'http';
+    const baseUrl = `${protocol}://${config.printerIp}:${port}`;
+
+    // Build ePOS-Print XML command
+    let eposXml = '<?xml version="1.0" encoding="utf-8"?>';
+    eposXml += '<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">';
+    eposXml += '<s:Body>';
+    eposXml += '<epos-print xmlns="http://www.epson-pos.com/schemas/2011/03/epos-print">';
+    
+    // Add text
+    eposXml += '<text lang="en"/>';
+    for (const line of lines) {
+      eposXml += `<text>${this.escapeXml(line)}&#10;</text>`;
+    }
+    
+    // Add feed and cut
+    eposXml += '<feed line="3"/>';
+    if (options.cutPaper !== false) {
+      eposXml += '<cut type="feed"/>';
+    }
+    
+    // Open drawer if requested
+    if (options.openDrawer) {
+      eposXml += '<pulse drawer="drawer_1" time="pulse_100"/>';
+    }
+    
+    eposXml += '</epos-print>';
+    eposXml += '</s:Body>';
+    eposXml += '</s:Envelope>';
+
+    console.log(`🖨️ Printing via HTTP to ${baseUrl}/cgi-bin/epos/service.cgi`);
+
+    try {
+      const response = await fetch(`${baseUrl}/cgi-bin/epos/service.cgi?devid=${config.deviceId || 'local_printer'}&timeout=10000`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/xml; charset=utf-8',
+          'SOAPAction': '""',
+        },
+        body: eposXml,
+      });
+
+      if (response.ok) {
+        console.log('✅ HTTP print successful');
+        return true;
+      } else {
+        const errorText = await response.text();
+        console.error('❌ HTTP print failed:', errorText);
+        throw new Error(`Print failed: ${response.status} ${response.statusText}`);
+      }
+    } catch (error: any) {
+      console.error('❌ HTTP print error:', error);
+      throw error;
+    }
+  }
+
+  private escapeXml(text: string): string {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;');
+  }
+
+  /**
    * Connect to printer
    * For Safari/iOS: Uses HTTPS (port 8043) with SSL enabled
    * For Desktop: Uses HTTP (port 8008) by default

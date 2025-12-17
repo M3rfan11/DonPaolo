@@ -320,29 +320,53 @@ const POS: React.FC = () => {
       const printerConfig = printerService.getConfig();
       const isMobile = isMobileDevice();
 
-      // For mobile devices, always use API-based printing (works from anywhere)
+      // For mobile devices, try direct HTTP printing first, then fallback to API/browser
       // For desktop, try ePOS SDK first if on same network, then fallback to API
       if (isMobile) {
-        // Mobile: Always use API-based printing (proxy through main API)
-        if (printerConfig && autoPrint) {
+        // Mobile: Try direct HTTP printing to printer first (if on same network)
+        const eposConfig = eposPrinterService.getConfig();
+        
+        if (eposConfig && autoPrint) {
           try {
-            await printerService.printReceipt(invoiceContent, openDrawer);
-            showSnackbar('Receipt sent to printer successfully!', 'success');
+            // Try direct HTTP print (bypasses WebSocket which Safari blocks)
+            const receiptLines = formatReceiptForEpos(currentSale, true);
+            await eposPrinterService.printViaHttp(receiptLines, {
+              openDrawer: openDrawer,
+              cutPaper: true,
+            });
+            showSnackbar('Receipt printed successfully!', 'success');
 
             // Print kitchen ticket if needed
             if (kitchenContent) {
               setTimeout(async () => {
                 try {
-                  await printerService.printReceipt(kitchenContent, false);
+                  const kitchenLines = formatReceiptForEpos(currentSale, false);
+                  await eposPrinterService.printViaHttp(kitchenLines, {
+                    openDrawer: false,
+                    cutPaper: true,
+                  });
                 } catch (error) {
                   console.error('Error printing kitchen ticket:', error);
                 }
               }, 1000);
             }
-          } catch (error: any) {
-            console.error('Error printing via API:', error);
-            showSnackbar(`Print failed: ${error.message}. Falling back to browser print.`, 'warning');
-            printViaBrowser(invoiceContent, kitchenContent, autoPrint);
+          } catch (httpError: any) {
+            console.error('Direct HTTP print failed:', httpError);
+            
+            // Fallback to API-based printing
+            if (printerConfig) {
+              try {
+                await printerService.printReceipt(invoiceContent, openDrawer);
+                showSnackbar('Receipt sent to printer via API!', 'success');
+              } catch (apiError: any) {
+                console.error('API print also failed:', apiError);
+                showSnackbar(`Print failed. Make sure your phone is on the same WiFi as the printer.`, 'warning');
+                printViaBrowser(invoiceContent, kitchenContent, autoPrint);
+              }
+            } else {
+              showSnackbar(`Print failed. Configure printer settings first.`, 'warning');
+              printViaBrowser(invoiceContent, kitchenContent, autoPrint);
+            }
           }
         } else {
           // No printer configured, use browser print
