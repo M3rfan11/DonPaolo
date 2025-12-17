@@ -144,6 +144,12 @@ const PrinterConfigDialog: React.FC<PrinterConfigDialogProps> = ({
     }
   };
 
+  // Detect if running on mobile device
+  const isMobileDevice = () => {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+           (window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
+  };
+
   const handleConnect = async () => {
     if (!printerIp.trim() || !printerPort.trim()) {
       setTestResult({ success: false, message: 'Please enter printer IP and port' });
@@ -152,6 +158,8 @@ const PrinterConfigDialog: React.FC<PrinterConfigDialogProps> = ({
 
     setConnecting(true);
     setTestResult(null);
+
+    const isMobile = isMobileDevice();
 
     try {
       const config: EposPrinterConfig = {
@@ -162,13 +170,29 @@ const PrinterConfigDialog: React.FC<PrinterConfigDialogProps> = ({
         buffer: false,
       };
 
-      await eposPrinterService.connect(config);
-      eposPrinterService.saveConfig(config);
-      setIsConnected(true);
-      setTestResult({
-        success: true,
-        message: 'Connected to printer successfully!',
-      });
+      // On mobile, don't try direct ePOS connection (Safari blocks it)
+      // Just save config and test via API
+      if (isMobile) {
+        eposPrinterService.saveConfig(config);
+        printerService.saveConfig({
+          printerIp: config.printerIp,
+          printerPort: config.printerPort,
+          deviceId: config.deviceId,
+        });
+        setTestResult({
+          success: true,
+          message: 'Printer configuration saved! On mobile, printing works through the API.',
+        });
+      } else {
+        // Desktop: Try direct ePOS connection
+        await eposPrinterService.connect(config);
+        eposPrinterService.saveConfig(config);
+        setIsConnected(true);
+        setTestResult({
+          success: true,
+          message: 'Connected to printer successfully!',
+        });
+      }
 
       if (onConfigSaved) {
         onConfigSaved();
@@ -176,7 +200,9 @@ const PrinterConfigDialog: React.FC<PrinterConfigDialogProps> = ({
     } catch (error: any) {
       setTestResult({
         success: false,
-        message: `Connection failed: ${error.message}`,
+        message: isMobile 
+          ? `Configuration saved. On mobile, printing works through the API.`
+          : `Connection failed: ${error.message}`,
       });
       setIsConnected(false);
     } finally {
@@ -236,8 +262,17 @@ const PrinterConfigDialog: React.FC<PrinterConfigDialogProps> = ({
       <DialogContent>
         <Box sx={{ mt: 2 }}>
           <Alert severity="info" sx={{ mb: 3 }}>
-            Configure your Epson ePOS-Print printer to enable printing from mobile devices and deployed environments.
-            Printer functionality is integrated into the main API - no separate service needed!
+            Configure your Epson ePOS-Print printer to enable printing from any device.
+            {isMobileDevice() && (
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                <strong>Mobile Device Detected:</strong> Printing works through the API - no direct connection needed!
+              </Typography>
+            )}
+            {!isMobileDevice() && (
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                Printer functionality is integrated into the main API. On desktop, direct connection is attempted first.
+              </Typography>
+            )}
           </Alert>
 
           <TextField

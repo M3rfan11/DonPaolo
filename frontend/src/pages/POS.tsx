@@ -300,82 +300,127 @@ const POS: React.FC = () => {
     printReceipt(false, false); // Preview mode - no drawer, no auto-print
   };
 
+  // Detect if running on mobile device
+  const isMobileDevice = () => {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+           (window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
+  };
+
   const printReceipt = async (openDrawer: boolean = true, autoPrint: boolean = true) => {
     if (!currentSale) return;
 
     setPrinting(true);
 
     try {
-      // Check if ePOS printer is configured and connected
-      const printerConfig = eposPrinterService.getConfig();
-      const isEposConnected = eposPrinterService.isPrinterConnected();
-
-      // Try to connect if configured but not connected
-      if (printerConfig && !isEposConnected) {
-        try {
-          await eposPrinterService.connect(printerConfig);
-          showSnackbar('Connected to printer', 'success');
-        } catch (error: any) {
-          console.error('Failed to connect to printer:', error);
-          showSnackbar(`Printer connection failed: ${error.message}`, 'warning');
-        }
-      }
-
       // Generate receipt HTML content
       const invoiceContent = generateReceiptHTML(currentSale, true);
       const kitchenContent = generateReceiptHTML(currentSale, false);
 
-      // Use ePOS direct printing if connected
-      if (eposPrinterService.isPrinterConnected() && autoPrint) {
-        try {
-          // Format receipt as text lines for ePOS printer
-          const receiptLines = formatReceiptForEpos(currentSale, true);
-          
-          // Print customer receipt
-          eposPrinterService.printReceiptText(receiptLines, {
-            align: 'left',
-            font: 'A',
-            openDrawer: openDrawer,
-            cutPaper: true,
-          });
+      // Check if printer is configured
+      const printerConfig = printerService.getConfig();
+      const isMobile = isMobileDevice();
 
-          showSnackbar('Receipt sent to printer successfully!', 'success');
+      // For mobile devices, always use API-based printing (works from anywhere)
+      // For desktop, try ePOS SDK first if on same network, then fallback to API
+      if (isMobile) {
+        // Mobile: Always use API-based printing (proxy through main API)
+        if (printerConfig && autoPrint) {
+          try {
+            await printerService.printReceipt(invoiceContent, openDrawer);
+            showSnackbar('Receipt sent to printer successfully!', 'success');
 
-          // Print kitchen ticket if needed
-          if (kitchenContent) {
-            setTimeout(() => {
-              try {
-                const kitchenLines = formatReceiptForEpos(currentSale, false);
-                eposPrinterService.printReceiptText(kitchenLines, {
-                  align: 'left',
-                  font: 'A',
-                  openDrawer: false,
-                  cutPaper: true,
-                });
-              } catch (error) {
-                console.error('Error printing kitchen ticket:', error);
-              }
-            }, 1000);
+            // Print kitchen ticket if needed
+            if (kitchenContent) {
+              setTimeout(async () => {
+                try {
+                  await printerService.printReceipt(kitchenContent, false);
+                } catch (error) {
+                  console.error('Error printing kitchen ticket:', error);
+                }
+              }, 1000);
+            }
+          } catch (error: any) {
+            console.error('Error printing via API:', error);
+            showSnackbar(`Print failed: ${error.message}. Falling back to browser print.`, 'warning');
+            printViaBrowser(invoiceContent, kitchenContent, autoPrint);
           }
-        } catch (error: any) {
-          console.error('Error printing via ePOS:', error);
-          showSnackbar(`Print failed: ${error.message}. Falling back to browser print.`, 'warning');
-          // Fallback to browser print
-          printViaBrowser(invoiceContent, kitchenContent, autoPrint);
-        }
-      } else if (printerConfig && autoPrint) {
-        // Try image-based printing as fallback
-        try {
-          await printerService.printReceipt(invoiceContent, openDrawer);
-          showSnackbar('Receipt sent to printer successfully!', 'success');
-        } catch (error: any) {
-          console.error('Error printing via printer service:', error);
-          showSnackbar(`Print failed: ${error.message}. Falling back to browser print.`, 'warning');
+        } else {
+          // No printer configured, use browser print
           printViaBrowser(invoiceContent, kitchenContent, autoPrint);
         }
       } else {
-        // Use browser print (original method)
-        printViaBrowser(invoiceContent, kitchenContent, autoPrint);
+        // Desktop: Try ePOS SDK first (direct connection), then API fallback
+        const eposConfig = eposPrinterService.getConfig();
+        const isEposConnected = eposPrinterService.isPrinterConnected();
+
+        // Try to connect if configured but not connected
+        if (eposConfig && !isEposConnected) {
+          try {
+            await eposPrinterService.connect(eposConfig);
+            showSnackbar('Connected to printer', 'success');
+          } catch (error: any) {
+            console.error('Failed to connect to printer:', error);
+            // Continue to API-based printing
+          }
+        }
+
+        // Use ePOS direct printing if connected
+        if (eposPrinterService.isPrinterConnected() && autoPrint) {
+          try {
+            const receiptLines = formatReceiptForEpos(currentSale, true);
+            eposPrinterService.printReceiptText(receiptLines, {
+              align: 'left',
+              font: 'A',
+              openDrawer: openDrawer,
+              cutPaper: true,
+            });
+            showSnackbar('Receipt sent to printer successfully!', 'success');
+
+            if (kitchenContent) {
+              setTimeout(() => {
+                try {
+                  const kitchenLines = formatReceiptForEpos(currentSale, false);
+                  eposPrinterService.printReceiptText(kitchenLines, {
+                    align: 'left',
+                    font: 'A',
+                    openDrawer: false,
+                    cutPaper: true,
+                  });
+                } catch (error) {
+                  console.error('Error printing kitchen ticket:', error);
+                }
+              }, 1000);
+            }
+          } catch (error: any) {
+            console.error('Error printing via ePOS:', error);
+            // Fallback to API-based printing
+            if (printerConfig && autoPrint) {
+              try {
+                await printerService.printReceipt(invoiceContent, openDrawer);
+                showSnackbar('Receipt sent to printer successfully!', 'success');
+              } catch (apiError: any) {
+                console.error('Error printing via API:', apiError);
+                showSnackbar(`Print failed: ${apiError.message}. Falling back to browser print.`, 'warning');
+                printViaBrowser(invoiceContent, kitchenContent, autoPrint);
+              }
+            } else {
+              printViaBrowser(invoiceContent, kitchenContent, autoPrint);
+            }
+          }
+        } else if (printerConfig && autoPrint) {
+          // Desktop fallback: Use API-based printing
+          try {
+            await printerService.printReceipt(invoiceContent, openDrawer);
+            showSnackbar('Receipt sent to printer successfully!', 'success');
+          } catch (error: any) {
+            console.error('Error printing via printer service:', error);
+            showSnackbar(`Print failed: ${error.message}. Falling back to browser print.`, 'warning');
+            printViaBrowser(invoiceContent, kitchenContent, autoPrint);
+          }
+        } else {
+          // No printer configured, use browser print
+          printViaBrowser(invoiceContent, kitchenContent, autoPrint);
+        }
       }
     } catch (error: any) {
       console.error('Error printing receipt:', error);
