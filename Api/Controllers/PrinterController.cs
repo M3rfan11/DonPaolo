@@ -166,14 +166,14 @@ public class PrinterController : ControllerBase
 
                     // Decode base64 to get image dimensions
                     var imageBytes = Convert.FromBase64String(base64Image);
-                    int imageHeight;
                     
-                    using (var imgStream = new MemoryStream(imageBytes))
-                    {
-                        // For .NET, we'll use a simpler approach - estimate height
-                        // In production, you might want to use SixLabors.ImageSharp or similar
-                        imageHeight = 1000; // Default height, adjust based on your needs
-                    }
+                    // Estimate image height based on data size
+                    // For thermal printers, typical aspect ratio is ~3:1 (width:height)
+                    // Base64 encoding increases size by ~33%, so we estimate height
+                    const int thermalWidth = 300;
+                    // Rough estimation: height = (dataSize / width) * aspectRatio
+                    var estimatedHeight = Math.Max(500, (int)(imageBytes.Length / thermalWidth * 0.4));
+                    var imageHeight = estimatedHeight;
 
                     // Thermal printer width (80mm = ~300px at 180dpi)
                     const int thermalWidth = 300;
