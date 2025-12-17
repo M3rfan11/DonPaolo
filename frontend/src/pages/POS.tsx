@@ -1136,9 +1136,10 @@ const POS: React.FC = () => {
                 variant="contained"
                 startIcon={<PrintIcon />}
                 onClick={() => printReceipt(true, true)}
+                disabled={printing}
                 sx={{ bgcolor: '#000', '&:hover': { bgcolor: '#333' } }}
               >
-                Print & Open Drawer
+                {printing ? 'Printing...' : 'Print & Open Drawer'}
               </Button>
             </Box>
           </Box>

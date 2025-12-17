@@ -19,7 +19,7 @@ import {
   CheckCircle as CheckCircleIcon,
   Error as ErrorIcon,
 } from '@mui/icons-material';
-import printerService, { PrinterConfig, DiscoveredPrinter } from '../services/printerService';
+import printerService, { DiscoveredPrinter } from '../services/printerService';
 import eposPrinterService, { PrinterConfig as EposPrinterConfig } from '../services/eposPrinterService';
 
 interface PrinterConfigDialogProps {

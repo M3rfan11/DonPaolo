@@ -429,5 +429,7 @@ class EposPrinterService {
   }
 }
 
-export default new EposPrinterService();
+const eposPrinterService = new EposPrinterService();
+// eslint-disable-next-line import/no-anonymous-default-export
+export default eposPrinterService;
 
