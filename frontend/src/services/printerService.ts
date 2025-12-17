@@ -1,17 +1,25 @@
 /**
  * Printer Service for DonPaolo
  * Handles communication with the printer helper backend for Epson ePOS-Print printers
- * Works with iPad and deployed environments via ngrok
+ * 
+ * IMPORTANT: For mobile printing to work, you need a "Printer Bridge" running on a computer
+ * that is on the SAME network as the printer. This bridge forwards print commands from
+ * the cloud to your local printer.
+ * 
+ * Options:
+ * 1. Run printer helper locally and use ngrok to expose it
+ * 2. If phone is on same WiFi as printer, use the local IP directly
  */
 
-// Use main API URL instead of separate printer helper
+// Default API URL (cloud-hosted, cannot reach local printers)
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:10000';
-const PRINTER_HELPER_URL = process.env.REACT_APP_PRINTER_HELPER_URL || API_BASE_URL;
 
 export interface PrinterConfig {
   printerIp: string;
   printerPort: number;
   deviceId?: string;
+  // URL of the printer bridge (local helper that can reach the printer)
+  printerBridgeUrl?: string;
 }
 
 export interface DiscoveredPrinter {
@@ -62,6 +70,27 @@ class PrinterService {
   }
 
   /**
+   * Get the printer bridge URL (local helper or main API)
+   */
+  getPrinterBridgeUrl(): string {
+    // Priority: config.printerBridgeUrl > main API
+    const config = this.getConfig();
+    if (config?.printerBridgeUrl) {
+      return config.printerBridgeUrl;
+    }
+    return API_BASE_URL;
+  }
+
+  /**
+   * Set the printer bridge URL
+   */
+  setPrinterBridgeUrl(url: string): void {
+    const config = this.getConfig() || { printerIp: '', printerPort: 80 };
+    config.printerBridgeUrl = url;
+    this.saveConfig(config);
+  }
+
+  /**
    * Discover printer on the network
    */
   async discoverPrinter(ip: string, subnetMask?: string, gateway?: string): Promise<DiscoveredPrinter[]> {
@@ -70,8 +99,11 @@ class PrinterService {
       if (subnetMask) params.append('subnetMask', subnetMask);
       if (gateway) params.append('gateway', gateway);
 
-      // Use main API endpoint
-      const response = await fetch(`${PRINTER_HELPER_URL}/api/Printer/discover?${params}`);
+      const bridgeUrl = this.getPrinterBridgeUrl();
+      console.log('Discovering printer via:', bridgeUrl);
+      
+      // Use the printer bridge URL (local helper or main API)
+      const response = await fetch(`${bridgeUrl}/api/Printer/discover?${params}`);
       if (!response.ok) {
         throw new Error(`Failed to discover printer: ${response.statusText}`);
       }
@@ -169,14 +201,17 @@ class PrinterService {
       // Convert HTML to image
       const imageDataUrl = await this.htmlToImage(htmlContent, 300);
 
-      // Send to main API printer endpoint
+      const bridgeUrl = this.getPrinterBridgeUrl();
+      console.log('Printing via:', bridgeUrl);
+
+      // Send to printer bridge (local helper or main API)
       const params = new URLSearchParams({
         printerIp: config.printerIp,
         printerPort: config.printerPort.toString(),
         deviceId: config.deviceId || 'local_printer',
       });
 
-      const response = await fetch(`${PRINTER_HELPER_URL}/api/Printer/print-images?${params}`, {
+      const response = await fetch(`${bridgeUrl}/api/Printer/print-images?${params}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
