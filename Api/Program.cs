@@ -14,21 +14,11 @@ var isProduction = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") 
 if (isProduction)
 {
     Environment.SetEnvironmentVariable("DOTNET_USE_POLLING_FILE_WATCHER", "0");
-    // Disable file watching for configuration files
     Environment.SetEnvironmentVariable("DOTNET_SKIP_FIRST_TIME_EXPERIENCE", "true");
     Environment.SetEnvironmentVariable("DOTNET_CLI_TELEMETRY_OPTOUT", "true");
 }
 
 var builder = WebApplication.CreateBuilder(args);
-
-// Disable file watching in production
-if (isProduction)
-{
-    builder.Configuration.Sources.Clear();
-    builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: false);
-    builder.Configuration.AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: false);
-    builder.Configuration.AddEnvironmentVariables();
-}
 
 // Add services to the container.
 builder.Services.AddControllers()
@@ -562,8 +552,8 @@ using (var scope = app.Services.CreateScope())
                 
                 // For PostgreSQL, we should NOT continue if migrations fail - the schema is broken
                 // Only continue for SQLite in development
-                var isProduction = app.Environment.IsProduction();
-                if (isProduction)
+                var isProdEnv = app.Environment.IsProduction();
+                if (isProdEnv)
                 {
                     logger.LogError("CRITICAL: Migration failed in production. The application may not work correctly.");
                     logger.LogError("Please check the migration logs and fix the issue before continuing.");
@@ -575,7 +565,7 @@ using (var scope = app.Services.CreateScope())
                 }
                 
                 // Try to ensure database is created even if migration fails (for development)
-                if (!isProduction)
+                if (!isProdEnv)
                 {
                     try
                     {
