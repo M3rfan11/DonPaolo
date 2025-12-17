@@ -167,16 +167,13 @@ public class PrinterController : ControllerBase
                     // Decode base64 to get image dimensions
                     var imageBytes = Convert.FromBase64String(base64Image);
                     
-                    // Estimate image height based on data size
-                    // For thermal printers, typical aspect ratio is ~3:1 (width:height)
-                    // Base64 encoding increases size by ~33%, so we estimate height
+                    // Thermal printer width (80mm = ~300px at 180dpi)
                     const int thermalWidth = 300;
+                    
+                    // Estimate image height based on data size
                     // Rough estimation: height = (dataSize / width) * aspectRatio
                     var estimatedHeight = Math.Max(500, (int)(imageBytes.Length / thermalWidth * 0.4));
                     var imageHeight = estimatedHeight;
-
-                    // Thermal printer width (80mm = ~300px at 180dpi)
-                    const int thermalWidth = 300;
 
                     // Send image to Epson ePOS-Print service via HTTP POST
                     var eposPayload = new
