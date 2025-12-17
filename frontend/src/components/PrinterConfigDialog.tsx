@@ -144,12 +144,6 @@ const PrinterConfigDialog: React.FC<PrinterConfigDialogProps> = ({
     }
   };
 
-  // Detect if running on mobile device
-  const isMobileDevice = () => {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-           (window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
-  };
-
   const handleConnect = async () => {
     if (!printerIp.trim() || !printerPort.trim()) {
       setTestResult({ success: false, message: 'Please enter printer IP and port' });
