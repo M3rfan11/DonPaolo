@@ -160,3 +160,6 @@ backend.log
 authrbac_dev.db-shm
 authrbac_dev.db-wal
 .project_location
+
+# Printer folder - local development only, not for deployment
+printer/

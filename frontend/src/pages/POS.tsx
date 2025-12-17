@@ -39,8 +39,12 @@ import {
   Print as PrintIcon,
   CheckCircle as CheckCircleIcon,
   PersonAdd as PersonAddIcon,
+  Settings as SettingsIcon,
 } from '@mui/icons-material';
 import api from '../services/api';
+import printerService from '../services/printerService';
+import eposPrinterService from '../services/eposPrinterService';
+import PrinterConfigDialog from '../components/PrinterConfigDialog';
 
 interface POSProduct {
   productId: number;
@@ -105,8 +109,10 @@ const POS: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [saleDialogOpen, setSaleDialogOpen] = useState(false);
   const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
+  const [printerConfigOpen, setPrinterConfigOpen] = useState(false);
   const [currentSale, setCurrentSale] = useState<SaleResponse | null>(null);
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' | 'info' });
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' | 'info' | 'warning' });
+  const [printing, setPrinting] = useState(false);
 
   useEffect(() => {
     loadProducts();
@@ -126,7 +132,7 @@ const POS: React.FC = () => {
     }
   };
 
-  const showSnackbar = (message: string, severity: 'success' | 'error' | 'info') => {
+  const showSnackbar = (message: string, severity: 'success' | 'error' | 'info' | 'warning') => {
     setSnackbar({ open: true, message, severity });
   };
 
@@ -297,225 +303,337 @@ const POS: React.FC = () => {
   const printReceipt = async (openDrawer: boolean = true, autoPrint: boolean = true) => {
     if (!currentSale) return;
 
-    if (openDrawer) {
-      try {
-        // Open cash drawer when printing invoice
-        await api.openCashDrawer();
-      } catch (error) {
-        console.error('Error opening cash drawer:', error);
-        // Continue with printing even if drawer fails
+    setPrinting(true);
+
+    try {
+      // Check if ePOS printer is configured and connected
+      const printerConfig = eposPrinterService.getConfig();
+      const isEposConnected = eposPrinterService.isPrinterConnected();
+
+      // Try to connect if configured but not connected
+      if (printerConfig && !isEposConnected) {
+        try {
+          await eposPrinterService.connect(printerConfig);
+          showSnackbar('Connected to printer', 'success');
+        } catch (error: any) {
+          console.error('Failed to connect to printer:', error);
+          showSnackbar(`Printer connection failed: ${error.message}`, 'warning');
+        }
       }
+
+      // Generate receipt HTML content
+      const invoiceContent = generateReceiptHTML(currentSale, true);
+      const kitchenContent = generateReceiptHTML(currentSale, false);
+
+      // Use ePOS direct printing if connected
+      if (eposPrinterService.isPrinterConnected() && autoPrint) {
+        try {
+          // Format receipt as text lines for ePOS printer
+          const receiptLines = formatReceiptForEpos(currentSale, true);
+          
+          // Print customer receipt
+          eposPrinterService.printReceiptText(receiptLines, {
+            align: 'left',
+            font: 'A',
+            openDrawer: openDrawer,
+            cutPaper: true,
+          });
+
+          showSnackbar('Receipt sent to printer successfully!', 'success');
+
+          // Print kitchen ticket if needed
+          if (kitchenContent) {
+            setTimeout(() => {
+              try {
+                const kitchenLines = formatReceiptForEpos(currentSale, false);
+                eposPrinterService.printReceiptText(kitchenLines, {
+                  align: 'left',
+                  font: 'A',
+                  openDrawer: false,
+                  cutPaper: true,
+                });
+              } catch (error) {
+                console.error('Error printing kitchen ticket:', error);
+              }
+            }, 1000);
+          }
+        } catch (error: any) {
+          console.error('Error printing via ePOS:', error);
+          showSnackbar(`Print failed: ${error.message}. Falling back to browser print.`, 'warning');
+          // Fallback to browser print
+          printViaBrowser(invoiceContent, kitchenContent, autoPrint);
+        }
+      } else if (printerConfig && autoPrint) {
+        // Try image-based printing as fallback
+        try {
+          await printerService.printReceipt(invoiceContent, openDrawer);
+          showSnackbar('Receipt sent to printer successfully!', 'success');
+        } catch (error: any) {
+          console.error('Error printing via printer service:', error);
+          showSnackbar(`Print failed: ${error.message}. Falling back to browser print.`, 'warning');
+          printViaBrowser(invoiceContent, kitchenContent, autoPrint);
+        }
+      } else {
+        // Use browser print (original method)
+        printViaBrowser(invoiceContent, kitchenContent, autoPrint);
+      }
+    } catch (error: any) {
+      console.error('Error printing receipt:', error);
+      showSnackbar(`Print error: ${error.message}`, 'error');
+    } finally {
+      setPrinting(false);
+    }
+  };
+
+  const formatReceiptForEpos = (sale: SaleResponse, includePrices: boolean): string[] => {
+    const lines: string[] = [];
+
+    // Header
+    lines.push('DON PAOLO');
+    lines.push(sale.storeName);
+    lines.push('Restaurant & Bar');
+    lines.push('─'.repeat(32));
+
+    // Receipt info
+    lines.push(`Receipt #: ${sale.saleNumber}`);
+    lines.push(`Date: ${new Date(sale.saleDate).toLocaleString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    })}`);
+    lines.push('─'.repeat(32));
+
+    // Customer info
+    lines.push(`Customer: ${sale.customerName}`);
+    lines.push(`Cashier: ${sale.cashierName}`);
+    lines.push(`Payment: ${sale.paymentMethod}`);
+    lines.push('─'.repeat(32));
+
+    // Items
+    if (includePrices) {
+      sale.items.forEach((item) => {
+        lines.push(`${item.productName}`);
+        lines.push(`  ${item.quantity}x ${formatEGP(item.unitPrice)} = ${formatEGP(item.totalPrice)}`);
+      });
+    } else {
+      // Kitchen ticket format
+      sale.items.forEach((item) => {
+        lines.push(`[${item.quantity}x] ${item.productName}`);
+      });
     }
 
-    // Print Customer Invoice (with prices)
-    const invoiceWindow = window.open('', '_blank');
-    const invoiceContent = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Invoice - ${currentSale.saleNumber}</title>
-          <style>
-            @media print {
-              @page { size: 80mm auto; margin: 0; }
-              body { margin: 5mm; }
-            }
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            body { 
-              font-family: 'Courier New', monospace;
-              font-size: 12px;
-              width: 80mm;
-              margin: 0 auto;
-              padding: 10px;
-              background: white;
-            }
-            .header { 
-              text-align: center; 
-              border-bottom: 2px dashed #000;
-              padding-bottom: 10px;
-              margin-bottom: 10px;
-            }
-            .store-name { 
-              font-size: 18px; 
-              font-weight: bold;
-              text-transform: uppercase;
-              margin-bottom: 5px;
-            }
-            .store-address {
-              font-size: 10px;
-              margin-bottom: 5px;
-            }
-            .receipt-info { 
-              text-align: center;
-              font-size: 10px;
-              margin: 10px 0;
-            }
-            .divider {
-              border-top: 1px dashed #000;
-              margin: 10px 0;
-            }
-            .items-section {
-              margin: 10px 0;
-            }
-            .item-row {
-              display: flex;
-              justify-content: space-between;
-              margin-bottom: 5px;
-              font-size: 11px;
-            }
-            .item-name {
-              flex: 1;
-              font-weight: bold;
-            }
-            .item-details {
-              text-align: right;
-              margin-left: 10px;
-            }
-            .item-quantity {
-              display: inline-block;
-              min-width: 30px;
-            }
-            .item-price {
-              display: inline-block;
-              min-width: 50px;
-              text-align: right;
-            }
-            .totals { 
-              margin-top: 15px;
-              border-top: 1px dashed #000;
-              padding-top: 10px;
-            }
-            .total-line { 
-              display: flex; 
-              justify-content: space-between; 
-              margin: 5px 0;
-              font-size: 11px;
-            }
-            .final-total { 
-              font-weight: bold; 
-              font-size: 14px;
-              border-top: 2px solid #000;
-              padding-top: 5px;
-              margin-top: 5px;
-            }
-            .footer {
-              text-align: center;
-              margin-top: 20px;
-              padding-top: 10px;
-              border-top: 1px dashed #000;
-              font-size: 10px;
-            }
-            .payment-info {
-              margin: 10px 0;
-              font-size: 11px;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div class="store-name">DON PAOLO</div>
-            <div class="store-address">${currentSale.storeName}</div>
-            <div class="store-address">Restaurant & Bar</div>
-          </div>
-          
-          <div class="receipt-info">
-            <div>Receipt #: ${currentSale.saleNumber}</div>
-            <div>Date: ${new Date(currentSale.saleDate).toLocaleString('en-US', { 
-              year: 'numeric', 
-              month: '2-digit', 
-              day: '2-digit', 
-              hour: '2-digit', 
-              minute: '2-digit' 
-            })}</div>
-          </div>
-          
-          <div class="divider"></div>
-          
-          <div class="payment-info">
-            <div>Customer: ${currentSale.customerName}</div>
-            <div>Cashier: ${currentSale.cashierName}</div>
-            <div>Payment: ${currentSale.paymentMethod}</div>
-          </div>
-          
-          <div class="divider"></div>
-          
-          <div class="items-section">
-            ${currentSale.items.map(item => `
-              <div class="item-row">
-                <div class="item-name">${item.productName}</div>
-                <div class="item-details">
-                  <span class="item-quantity">${item.quantity}x</span>
-                  <span class="item-price">${formatEGP(item.unitPrice)}</span>
-                </div>
-              </div>
-              <div class="item-row" style="justify-content: flex-end; font-size: 10px;">
-                <span>${formatEGP(item.totalPrice)}</span>
-              </div>
-            `).join('')}
-          </div>
-          
-          <div class="divider"></div>
-          
-          <div class="totals">
-            <div class="total-line">
-              <span>Subtotal:</span>
-              <span>${formatEGP(currentSale.totalAmount)}</span>
-            </div>
-            ${currentSale.discountAmount > 0 ? `
-              <div class="total-line">
-                <span>Discount:</span>
-                <span>-${formatEGP(currentSale.discountAmount)}</span>
-              </div>
-            ` : ''}
-            ${currentSale.taxAmount > 0 ? `
-              <div class="total-line">
-                <span>Tax:</span>
-                <span>${formatEGP(currentSale.taxAmount)}</span>
-              </div>
-            ` : ''}
-            <div class="total-line final-total">
-              <span>TOTAL:</span>
-              <span>${formatEGP(currentSale.finalAmount)}</span>
-            </div>
-          </div>
-          
-          <div class="footer">
-            <div>Thank you for dining with us!</div>
-            <div style="margin-top: 5px;">We hope to see you again soon</div>
-          </div>
-        </body>
-      </html>
-    `;
-    
-    if (invoiceWindow) {
-      invoiceWindow.document.write(invoiceContent);
-      invoiceWindow.document.close();
-      invoiceWindow.focus(); // Bring to front
-      
-      // Wait a bit then print (if auto-print is enabled)
-      if (autoPrint) {
-        setTimeout(() => {
-          invoiceWindow.print();
-        }, 250);
+    lines.push('─'.repeat(32));
+
+    // Totals (only for customer receipt)
+    if (includePrices) {
+      lines.push(`Subtotal: ${formatEGP(sale.totalAmount)}`);
+      if (sale.discountAmount > 0) {
+        lines.push(`Discount: -${formatEGP(sale.discountAmount)}`);
       }
+      if (sale.taxAmount > 0) {
+        lines.push(`Tax: ${formatEGP(sale.taxAmount)}`);
+      }
+      lines.push(`TOTAL: ${formatEGP(sale.finalAmount)}`);
+      lines.push('─'.repeat(32));
     }
 
-    // Print Kitchen Ticket (without prices) - separate window (open immediately)
-    const kitchenWindow = window.open('', '_blank');
-    const kitchenContent = `
+    // Footer
+    lines.push('Thank you for dining with us!');
+    lines.push('We hope to see you again soon');
+
+    return lines;
+  };
+
+  const generateReceiptHTML = (sale: SaleResponse, includePrices: boolean): string => {
+    if (includePrices) {
+      // Customer Invoice (with prices)
+      return `
         <!DOCTYPE html>
         <html>
           <head>
-            <title>Kitchen Ticket - ${currentSale.saleNumber}</title>
+            <title>Invoice - ${sale.saleNumber}</title>
             <style>
-              @media print {
-                @page { size: 80mm auto; margin: 0; }
-                body { margin: 5mm; }
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body { 
+                font-family: 'Courier New', monospace;
+                font-size: 12px;
+                width: 300px;
+                margin: 0 auto;
+                padding: 10px;
+                background: white;
               }
+              .header { 
+                text-align: center; 
+                border-bottom: 2px dashed #000;
+                padding-bottom: 10px;
+                margin-bottom: 10px;
+              }
+              .store-name { 
+                font-size: 18px; 
+                font-weight: bold;
+                text-transform: uppercase;
+                margin-bottom: 5px;
+              }
+              .store-address {
+                font-size: 10px;
+                margin-bottom: 5px;
+              }
+              .receipt-info { 
+                text-align: center;
+                font-size: 10px;
+                margin: 10px 0;
+              }
+              .divider {
+                border-top: 1px dashed #000;
+                margin: 10px 0;
+              }
+              .items-section {
+                margin: 10px 0;
+              }
+              .item-row {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 5px;
+                font-size: 11px;
+              }
+              .item-name {
+                flex: 1;
+                font-weight: bold;
+              }
+              .item-details {
+                text-align: right;
+                margin-left: 10px;
+              }
+              .item-quantity {
+                display: inline-block;
+                min-width: 30px;
+              }
+              .item-price {
+                display: inline-block;
+                min-width: 50px;
+                text-align: right;
+              }
+              .totals { 
+                margin-top: 15px;
+                border-top: 1px dashed #000;
+                padding-top: 10px;
+              }
+              .total-line { 
+                display: flex; 
+                justify-content: space-between; 
+                margin: 5px 0;
+                font-size: 11px;
+              }
+              .final-total { 
+                font-weight: bold; 
+                font-size: 14px;
+                border-top: 2px solid #000;
+                padding-top: 5px;
+                margin-top: 5px;
+              }
+              .footer {
+                text-align: center;
+                margin-top: 20px;
+                padding-top: 10px;
+                border-top: 1px dashed #000;
+                font-size: 10px;
+              }
+              .payment-info {
+                margin: 10px 0;
+                font-size: 11px;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <div class="store-name">DON PAOLO</div>
+              <div class="store-address">${sale.storeName}</div>
+              <div class="store-address">Restaurant & Bar</div>
+            </div>
+            
+            <div class="receipt-info">
+              <div>Receipt #: ${sale.saleNumber}</div>
+              <div>Date: ${new Date(sale.saleDate).toLocaleString('en-US', { 
+                year: 'numeric', 
+                month: '2-digit', 
+                day: '2-digit', 
+                hour: '2-digit', 
+                minute: '2-digit' 
+              })}</div>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <div class="payment-info">
+              <div>Customer: ${sale.customerName}</div>
+              <div>Cashier: ${sale.cashierName}</div>
+              <div>Payment: ${sale.paymentMethod}</div>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <div class="items-section">
+              ${sale.items.map(item => `
+                <div class="item-row">
+                  <div class="item-name">${item.productName}</div>
+                  <div class="item-details">
+                    <span class="item-quantity">${item.quantity}x</span>
+                    <span class="item-price">${formatEGP(item.unitPrice)}</span>
+                  </div>
+                </div>
+                <div class="item-row" style="justify-content: flex-end; font-size: 10px;">
+                  <span>${formatEGP(item.totalPrice)}</span>
+                </div>
+              `).join('')}
+            </div>
+            
+            <div class="divider"></div>
+            
+            <div class="totals">
+              <div class="total-line">
+                <span>Subtotal:</span>
+                <span>${formatEGP(sale.totalAmount)}</span>
+              </div>
+              ${sale.discountAmount > 0 ? `
+                <div class="total-line">
+                  <span>Discount:</span>
+                  <span>-${formatEGP(sale.discountAmount)}</span>
+                </div>
+              ` : ''}
+              ${sale.taxAmount > 0 ? `
+                <div class="total-line">
+                  <span>Tax:</span>
+                  <span>${formatEGP(sale.taxAmount)}</span>
+                </div>
+              ` : ''}
+              <div class="total-line final-total">
+                <span>TOTAL:</span>
+                <span>${formatEGP(sale.finalAmount)}</span>
+              </div>
+            </div>
+            
+            <div class="footer">
+              <div>Thank you for dining with us!</div>
+              <div style="margin-top: 5px;">We hope to see you again soon</div>
+            </div>
+          </body>
+        </html>
+      `;
+    } else {
+      // Kitchen Ticket (without prices)
+      return `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Kitchen Ticket - ${sale.saleNumber}</title>
+            <style>
               * { margin: 0; padding: 0; box-sizing: border-box; }
               body { 
                 font-family: 'Courier New', monospace;
                 font-size: 14px;
-                width: 80mm;
+                width: 300px;
                 margin: 0 auto;
                 padding: 10px;
                 background: white;
@@ -546,9 +664,9 @@ const POS: React.FC = () => {
                 margin: 10px 0;
               }
               .item-row {
-              display: block;
-              margin-bottom: 8px;
-              font-size: 13px;
+                display: block;
+                margin-bottom: 8px;
+                font-size: 13px;
               }
               .item-name {
                 font-weight: bold;
@@ -582,12 +700,12 @@ const POS: React.FC = () => {
           <body>
             <div class="header">
               <div class="kitchen-title">KITCHEN ORDER</div>
-              <div style="font-size: 12px;">${currentSale.storeName}</div>
+              <div style="font-size: 12px;">${sale.storeName}</div>
             </div>
             
             <div class="order-info">
-              <div>Order #: ${currentSale.saleNumber}</div>
-              <div class="timestamp">${new Date(currentSale.saleDate).toLocaleString('en-US', { 
+              <div>Order #: ${sale.saleNumber}</div>
+              <div class="timestamp">${new Date(sale.saleDate).toLocaleString('en-US', { 
                 year: 'numeric', 
                 month: '2-digit', 
                 day: '2-digit', 
@@ -599,7 +717,7 @@ const POS: React.FC = () => {
             <div class="divider"></div>
             
             <div class="items-section">
-              ${currentSale.items.map(item => `
+              ${sale.items.map(item => `
                 <div class="item-row">
                   <span class="item-quantity">${item.quantity}x</span>
                   <span class="item-name">${item.productName}</span>
@@ -610,33 +728,66 @@ const POS: React.FC = () => {
             <div class="divider"></div>
             
             <div class="footer">
-              <div>Customer: ${currentSale.customerName}</div>
-              <div style="margin-top: 5px;">Cashier: ${currentSale.cashierName}</div>
+              <div>Customer: ${sale.customerName}</div>
+              <div style="margin-top: 5px;">Cashier: ${sale.cashierName}</div>
             </div>
           </body>
         </html>
       `;
-      
-    if (kitchenWindow) {
-      kitchenWindow.document.write(kitchenContent);
-      kitchenWindow.document.close();
-      // Position second window next to first one
-      kitchenWindow.moveTo(window.screenX + 100, window.screenY + 100);
-      kitchenWindow.focus(); // Bring to front
+    }
+  };
+
+  const printViaBrowser = (invoiceContent: string, kitchenContent: string, autoPrint: boolean) => {
+    if (!currentSale) return;
+    
+    // Print Customer Invoice (with prices)
+    const invoiceWindow = window.open('', '_blank');
+    
+    if (invoiceWindow) {
+      invoiceWindow.document.write(invoiceContent);
+      invoiceWindow.document.close();
+      invoiceWindow.focus();
       
       if (autoPrint) {
         setTimeout(() => {
-          kitchenWindow.print();
-        }, 500); // Slightly longer delay so invoice prints first
+          invoiceWindow.print();
+        }, 250);
+      }
+    }
+
+    // Print Kitchen Ticket (without prices) - separate window
+    if (kitchenContent) {
+      const kitchenWindow = window.open('', '_blank');
+      if (kitchenWindow) {
+        kitchenWindow.document.write(kitchenContent);
+        kitchenWindow.document.close();
+        kitchenWindow.moveTo(window.screenX + 100, window.screenY + 100);
+        kitchenWindow.focus();
+        
+        if (autoPrint) {
+          setTimeout(() => {
+            kitchenWindow.print();
+          }, 500);
+        }
       }
     }
   };
 
   return (
     <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
-      <Typography variant="h4" sx={{ fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' }, mb: 2 }}>
-        Point of Sale (POS)
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h4" sx={{ fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' } }}>
+          Point of Sale (POS)
+        </Typography>
+        <Button
+          variant="outlined"
+          startIcon={<SettingsIcon />}
+          onClick={() => setPrinterConfigOpen(true)}
+          size="small"
+        >
+          Printer Settings
+        </Button>
+      </Box>
 
       <Box sx={{ 
         display: 'flex', 
@@ -1081,6 +1232,15 @@ const POS: React.FC = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      {/* Printer Configuration Dialog */}
+      <PrinterConfigDialog
+        open={printerConfigOpen}
+        onClose={() => setPrinterConfigOpen(false)}
+        onConfigSaved={() => {
+          showSnackbar('Printer configuration saved!', 'success');
+        }}
+      />
     </Box>
   );
 };
