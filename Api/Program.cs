@@ -604,6 +604,22 @@ using (var scope = app.Services.CreateScope())
                 logger.LogError(ex, "Failed to seed users. Error: {ErrorMessage}", ex.Message);
             }
             
+            // One-time password reset for admin@company.com
+            try
+            {
+                var adminUser = await context.Users.FirstOrDefaultAsync(u => u.Email == "admin@company.com");
+                if (adminUser != null)
+                {
+                    adminUser.PasswordHash = BCrypt.Net.BCrypt.HashPassword("Ziad El-shafie97");
+                    await context.SaveChangesAsync();
+                    logger.LogInformation("Password reset for admin@company.com");
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to reset admin password");
+            }
+            
             try
             {
                 await SeedProducts.SeedAsync(context);
