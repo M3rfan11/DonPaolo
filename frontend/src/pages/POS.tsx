@@ -301,10 +301,25 @@ const POS: React.FC = () => {
     printReceipt(false, false); // Preview mode - no drawer, no auto-print
   };
 
-  // Detect if running on mobile device
+  // Detect if running on mobile device (including iPad with iPadOS 13+)
   const isMobileDevice = () => {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-           (window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
+    const userAgent = navigator.userAgent;
+    
+    // Check for mobile user agents
+    const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+    
+    // iPadOS 13+ pretends to be a Mac, so check for touch support on "Mac"
+    // Real Macs don't have touch, but iPads do
+    const isIPad = (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
+                   (navigator.platform === 'iPad');
+    
+    // Also check screen size for smaller tablets
+    const isSmallScreen = window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+    
+    // For iPad specifically, also check touch capability
+    const hasTouchScreen = navigator.maxTouchPoints > 0 || 'ontouchstart' in window;
+    
+    return isMobileUA || isIPad || isSmallScreen || (hasTouchScreen && /Macintosh/i.test(userAgent));
   };
 
   const printReceipt = async (openDrawer: boolean = true, autoPrint: boolean = true) => {
