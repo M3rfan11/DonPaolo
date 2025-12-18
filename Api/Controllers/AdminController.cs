@@ -404,6 +404,44 @@ public class AdminController : ControllerBase
         }
     }
 
+    [HttpPost("users/{id}/reset-password")]
+    public async Task<ActionResult> ResetUserPassword(int id, [FromBody] ResetPasswordRequest request)
+    {
+        try
+        {
+            var user = await _context.Users.FindAsync(id);
+            if (user == null)
+            {
+                return NotFound(new { message = "User not found" });
+            }
+
+            // Hash and save new password
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            // Get current user ID for audit
+            var currentUserId = GetCurrentUserId();
+
+            // Audit log
+            await _auditService.LogAsync(
+                "User",
+                id.ToString(),
+                "ResetPassword",
+                after: $"Password reset for user {user.Email}",
+                actorUserId: currentUserId
+            );
+
+            return Ok(new { message = $"Password reset successfully for {user.Email}" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error resetting password for user {UserId}", id);
+            return StatusCode(500, new { message = "An error occurred while resetting password" });
+        }
+    }
+
     #endregion
 
     #region Role Management

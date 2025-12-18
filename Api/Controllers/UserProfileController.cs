@@ -299,6 +299,52 @@ public class UserProfileController : ControllerBase
         }
     }
 
+    [HttpPost("change-password")]
+    public async Task<ActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            if (userId == null)
+            {
+                return Unauthorized(new { message = "User not found" });
+            }
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            if (user == null)
+            {
+                return NotFound(new { message = "User not found" });
+            }
+
+            // Verify current password
+            if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
+            {
+                return BadRequest(new { message = "Current password is incorrect" });
+            }
+
+            // Hash and save new password
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            // Audit log
+            await _auditService.LogAsync(
+                "User",
+                userId.ToString(),
+                "ChangePassword",
+                actorUserId: userId
+            );
+
+            return Ok(new { message = "Password changed successfully" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error changing password");
+            return StatusCode(500, new { message = "An error occurred while changing password" });
+        }
+    }
+
     private int? GetCurrentUserId()
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
