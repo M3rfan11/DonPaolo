@@ -601,9 +601,9 @@ const POS: React.FC = () => {
               body { 
                 font-family: 'Courier New', monospace;
                 font-size: 12px;
-                width: 300px;
+                width: 80mm;
                 margin: 0 auto;
-                padding: 10px;
+                padding: 5px;
                 background: white;
               }
               .header { 
@@ -775,9 +775,9 @@ const POS: React.FC = () => {
               body { 
                 font-family: 'Courier New', monospace;
                 font-size: 14px;
-                width: 300px;
+                width: 80mm;
                 margin: 0 auto;
-                padding: 10px;
+                padding: 5px;
                 background: white;
               }
               .header { 
