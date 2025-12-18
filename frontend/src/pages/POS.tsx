@@ -1274,18 +1274,16 @@ const POS: React.FC = () => {
               >
                 Preview Invoices
               </Button>
-              {/* Print via App button - uses Web Share API to send to Epson iPrint or similar */}
-              {isMobileDevice() && (
-                <Button
-                  variant="contained"
-                  startIcon={<ShareIcon />}
-                  onClick={printViaApp}
-                  disabled={printing}
-                  sx={{ bgcolor: '#1976d2', '&:hover': { bgcolor: '#1565c0' } }}
-                >
-                  {printing ? 'Sharing...' : 'Print via App'}
-                </Button>
-              )}
+              {/* Print via App button - uses Web Share API or opens image for printing */}
+              <Button
+                variant="contained"
+                startIcon={<ShareIcon />}
+                onClick={printViaApp}
+                disabled={printing}
+                sx={{ bgcolor: '#1976d2', '&:hover': { bgcolor: '#1565c0' } }}
+              >
+                {printing ? 'Sharing...' : 'Print via App'}
+              </Button>
               <Button
                 variant="contained"
                 startIcon={<PrintIcon />}
