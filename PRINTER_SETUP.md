@@ -155,3 +155,4 @@ When deploying the frontend (e.g., Vercel, Netlify), you need to expose the prin
 - The system falls back to browser print if printer is not configured
 - Receipts are converted to images (PNG) before sending to printer
 
+

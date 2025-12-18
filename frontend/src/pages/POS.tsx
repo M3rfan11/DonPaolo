@@ -40,6 +40,7 @@ import {
   CheckCircle as CheckCircleIcon,
   PersonAdd as PersonAddIcon,
   Settings as SettingsIcon,
+  Share as ShareIcon,
 } from '@mui/icons-material';
 import api from '../services/api';
 import printerService from '../services/printerService';
@@ -429,6 +430,83 @@ const POS: React.FC = () => {
     } catch (error: any) {
       console.error('Error printing receipt:', error);
       showSnackbar(`Print error: ${error.message}`, 'error');
+    } finally {
+      setPrinting(false);
+    }
+  };
+
+  // Print via external app (Epson iPrint, etc.) using Web Share API
+  const printViaApp = async () => {
+    if (!currentSale) return;
+
+    setPrinting(true);
+
+    try {
+      // Generate receipt HTML
+      const invoiceContent = generateReceiptHTML(currentSale, true);
+
+      // Create a hidden container to render receipt
+      const container = document.createElement('div');
+      container.style.position = 'absolute';
+      container.style.left = '-9999px';
+      container.style.top = '0';
+      container.style.width = '80mm'; // Thermal printer width
+      container.style.background = 'white';
+      container.style.padding = '10px';
+      container.innerHTML = invoiceContent;
+      document.body.appendChild(container);
+
+      // Use html2canvas to convert to image
+      const html2canvas = (await import('html2canvas')).default;
+      const canvas = await html2canvas(container, {
+        scale: 2,
+        backgroundColor: '#ffffff',
+        logging: false,
+      });
+
+      // Clean up
+      document.body.removeChild(container);
+
+      // Convert canvas to blob
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((b) => {
+          if (b) resolve(b);
+          else reject(new Error('Failed to create image'));
+        }, 'image/png');
+      });
+
+      // Create file for sharing
+      const file = new File([blob], `receipt-${currentSale.saleNumber}.png`, { 
+        type: 'image/png' 
+      });
+
+      // Check if Web Share API with files is supported
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: `Receipt ${currentSale.saleNumber}`,
+          text: `Receipt from Don Paolo - ${currentSale.saleNumber}`,
+        });
+        showSnackbar('Receipt shared! Select your print app.', 'success');
+      } else {
+        // Fallback: Open image in new tab for manual printing
+        const url = URL.createObjectURL(blob);
+        const newWindow = window.open(url, '_blank');
+        if (newWindow) {
+          newWindow.onload = () => {
+            newWindow.print();
+          };
+        }
+        showSnackbar('Receipt opened. Use your device to share/print.', 'info');
+      }
+    } catch (error: any) {
+      console.error('Error sharing receipt:', error);
+      if (error.name === 'AbortError') {
+        // User cancelled the share
+        showSnackbar('Share cancelled', 'info');
+      } else {
+        showSnackbar(`Share error: ${error.message}`, 'error');
+      }
     } finally {
       setPrinting(false);
     }
@@ -1172,7 +1250,7 @@ const POS: React.FC = () => {
         <DialogTitle>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
             <Typography variant="h6">Sale Receipt</Typography>
-            <Box sx={{ display: 'flex', gap: 1 }}>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
               <Button
                 variant="outlined"
                 startIcon={<PrintIcon />}
@@ -1181,6 +1259,18 @@ const POS: React.FC = () => {
               >
                 Preview Invoices
               </Button>
+              {/* Print via App button - uses Web Share API to send to Epson iPrint or similar */}
+              {isMobileDevice() && (
+                <Button
+                  variant="contained"
+                  startIcon={<ShareIcon />}
+                  onClick={printViaApp}
+                  disabled={printing}
+                  sx={{ bgcolor: '#1976d2', '&:hover': { bgcolor: '#1565c0' } }}
+                >
+                  {printing ? 'Sharing...' : 'Print via App'}
+                </Button>
+              )}
               <Button
                 variant="contained"
                 startIcon={<PrintIcon />}

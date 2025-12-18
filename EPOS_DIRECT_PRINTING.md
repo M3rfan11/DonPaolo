@@ -197,3 +197,4 @@ Common errors and solutions:
 - Works best with Epson TM series printers
 - For iPad/deployed use, ensure printer is on same network or use VPN
 
+
